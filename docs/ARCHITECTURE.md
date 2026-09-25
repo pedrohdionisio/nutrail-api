@@ -317,6 +317,10 @@ container.bind(CreateMealUseCase, CreateMealUseCase, { scope: 'transient' });
 - **Entidades ricas:** as transições de status da `Meal` são métodos da entidade (`markAsQueued()`, `markAsProcessing()`, `complete(result)`, `fail()`), que validam a transição. Os use cases não setam `status` diretamente.
 - **Totais derivados:** os macros totais da `Meal` são sempre calculados a partir de `items`. Editar um item recalcula os totais sem chamar a IA.
 - **`GoalCalculator`:** serviço de domínio puro que calcula calorias e macros a partir do perfil (idade, gênero, peso, altura, nível de atividade, objetivo). Recebe a data atual como parâmetro (vinda do `Clock`).
+  - Taxa metabólica basal pela **Mifflin-St Jeor**, a equação mais validada para a população geral entre as que não exigem composição corporal. Idade exata, considerando mês e dia.
+  - Gasto total = TMB × fator de atividade (1,2 a 1,9), mais ou menos 500 kcal conforme o objetivo.
+  - Proteína de 2 g/kg e gordura de 0,9 g/kg; o carboidrato completa as calorias.
+- **Metas e perfil:** `PUT /profile` recalcula as metas e sobrescreve qualquer ajuste manual. `PUT /goals` edita as metas sem mexer no perfil.
 
 ---
 
@@ -431,7 +435,6 @@ O cliente reenvia a receita inteira. O risco de adulteração dos macros é acei
 ## 9. Pendências e decisões futuras
 
 - **Testes unitários** dos use cases com fakes em memória dos ports (a arquitetura já está preparada para isso).
-- **Fórmula do `GoalCalculator`** (ex.: Mifflin-St Jeor ou Harris-Benedict revisada) e cálculo preciso da idade (considerando mês e dia, não só o ano).
 - **Servir arquivos** via URL assinada do S3 ou via CloudFront.
 - **Mover a refeição manual e a sugestão de receita para a fila**, se a latência síncrona ficar ruim.
 - **Prazo do lifecycle** de `inputs/` no S3.

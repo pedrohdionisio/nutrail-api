@@ -1,0 +1,8 @@
+updateProfile:
+  handler: src/main/functions/updateProfile.handler
+  events:
+    - httpApi:
+        method: PUT
+        path: /profile
+        authorizer:
+          name: cognito

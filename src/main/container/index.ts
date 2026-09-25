@@ -15,6 +15,8 @@ import { ForgotPasswordUseCase } from '@/application/usecases/auth/ForgotPasswor
 import { RefreshTokenUseCase } from '@/application/usecases/auth/RefreshTokenUseCase';
 import { SignInUseCase } from '@/application/usecases/auth/SignInUseCase';
 import { SignUpUseCase } from '@/application/usecases/auth/SignUpUseCase';
+import { UpdateGoalsUseCase } from '@/application/usecases/goals/UpdateGoalsUseCase';
+import { UpdateProfileUseCase } from '@/application/usecases/profile/UpdateProfileUseCase';
 import { GoalCalculator } from '@/domain/services/GoalCalculator';
 import { CognitoAuthProvider } from '@/infra/auth/CognitoAuthProvider';
 import { DynamoUserIdResolver } from '@/infra/auth/DynamoUserIdResolver';
@@ -29,8 +31,10 @@ import { ForgotPasswordController } from '@/presentation/controllers/auth/Forgot
 import { RefreshTokenController } from '@/presentation/controllers/auth/RefreshTokenController';
 import { SignInController } from '@/presentation/controllers/auth/SignInController';
 import { SignUpController } from '@/presentation/controllers/auth/SignUpController';
+import { UpdateGoalsController } from '@/presentation/controllers/goals/UpdateGoalsController';
 import { HealthController } from '@/presentation/controllers/HealthController';
 import { GetMeController } from '@/presentation/controllers/me/GetMeController';
+import { UpdateProfileController } from '@/presentation/controllers/profile/UpdateProfileController';
 import { AppConfig } from '@/shared/config/AppConfig';
 
 export const container = new Container();
@@ -70,7 +74,9 @@ container
   .bind(ForgotPasswordUseCase, ForgotPasswordUseCase, { scope: 'singleton' })
   .bind(ConfirmForgotPasswordUseCase, ConfirmForgotPasswordUseCase, {
     scope: 'singleton',
-  });
+  })
+  .bind(UpdateProfileUseCase, UpdateProfileUseCase, { scope: 'singleton' })
+  .bind(UpdateGoalsUseCase, UpdateGoalsUseCase, { scope: 'singleton' });
 
 container
   .bind(HealthController, HealthController, { scope: 'transient' })
@@ -83,6 +89,10 @@ container
   .bind(ConfirmForgotPasswordController, ConfirmForgotPasswordController, {
     scope: 'transient',
   })
-  .bind(GetMeController, GetMeController, { scope: 'transient' });
+  .bind(GetMeController, GetMeController, { scope: 'transient' })
+  .bind(UpdateProfileController, UpdateProfileController, {
+    scope: 'transient',
+  })
+  .bind(UpdateGoalsController, UpdateGoalsController, { scope: 'transient' });
 
 container.validate();
