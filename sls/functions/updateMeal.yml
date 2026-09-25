@@ -1,0 +1,8 @@
+updateMeal:
+  handler: src/main/functions/updateMeal.handler
+  events:
+    - httpApi:
+        method: PUT
+        path: /meals/{mealId}
+        authorizer:
+          name: cognito

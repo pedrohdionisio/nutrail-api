@@ -1,4 +1,5 @@
 import { InvalidMealTransitionError } from '../errors/InvalidMealTransitionError';
+import { MealNotEditableError } from '../errors/MealNotEditableError';
 import { MealWithoutItemsError } from '../errors/MealWithoutItemsError';
 import type { Macros } from '../value-objects/Macros';
 
@@ -157,6 +158,19 @@ export class Meal {
     }
 
     this._status = 'SUCCESS';
+    this._name = name;
+    this._items = items;
+  }
+
+  edit({ name, items }: MealAnalysis): void {
+    if (this._status !== 'SUCCESS') {
+      throw new MealNotEditableError();
+    }
+
+    if (items.length === 0) {
+      throw new MealWithoutItemsError();
+    }
+
     this._name = name;
     this._items = items;
   }

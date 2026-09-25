@@ -84,6 +84,7 @@ functions:
   - ${file(sls/functions/getMeal.yml)}
   - ${file(sls/functions/createMeal.yml)}
   - ${file(sls/functions/createMealPictureUpload.yml)}
+  - ${file(sls/functions/updateMeal.yml)}
   - ${file(sls/functions/mealUploaded.yml)}
   - ${file(sls/functions/processMeal.yml)}
   - ${file(sls/functions/suggestRecipe.yml)}

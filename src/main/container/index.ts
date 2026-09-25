@@ -34,6 +34,7 @@ import { CreateMealPictureUploadUseCase } from '@/application/usecases/meals/Cre
 import { CreateMealUseCase } from '@/application/usecases/meals/CreateMealUseCase';
 import { MealUploadedUseCase } from '@/application/usecases/meals/MealUploadedUseCase';
 import { ProcessMealUseCase } from '@/application/usecases/meals/ProcessMealUseCase';
+import { UpdateMealUseCase } from '@/application/usecases/meals/UpdateMealUseCase';
 import { UpdateProfileUseCase } from '@/application/usecases/profile/UpdateProfileUseCase';
 import { SaveRecipeUseCase } from '@/application/usecases/recipes/SaveRecipeUseCase';
 import { SuggestRecipeUseCase } from '@/application/usecases/recipes/SuggestRecipeUseCase';
@@ -69,6 +70,7 @@ import { CreateMealController } from '@/presentation/controllers/meals/CreateMea
 import { CreateMealPictureUploadController } from '@/presentation/controllers/meals/CreateMealPictureUploadController';
 import { GetMealController } from '@/presentation/controllers/meals/GetMealController';
 import { ListMealsByDayController } from '@/presentation/controllers/meals/ListMealsByDayController';
+import { UpdateMealController } from '@/presentation/controllers/meals/UpdateMealController';
 import { UpdateProfileController } from '@/presentation/controllers/profile/UpdateProfileController';
 import { ListRecipesController } from '@/presentation/controllers/recipes/ListRecipesController';
 import { SaveRecipeController } from '@/presentation/controllers/recipes/SaveRecipeController';
@@ -148,6 +150,7 @@ container
   })
   .bind(MealUploadedUseCase, MealUploadedUseCase, { scope: 'singleton' })
   .bind(ProcessMealUseCase, ProcessMealUseCase, { scope: 'singleton' })
+  .bind(UpdateMealUseCase, UpdateMealUseCase, { scope: 'singleton' })
   .bind(SuggestRecipeUseCase, SuggestRecipeUseCase, { scope: 'singleton' })
   .bind(SaveRecipeUseCase, SaveRecipeUseCase, { scope: 'singleton' });
 
@@ -178,6 +181,7 @@ container
   .bind(CreateMealPictureUploadController, CreateMealPictureUploadController, {
     scope: 'transient',
   })
+  .bind(UpdateMealController, UpdateMealController, { scope: 'transient' })
   .bind(SuggestRecipeController, SuggestRecipeController, {
     scope: 'transient',
   })
