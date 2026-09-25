@@ -4,6 +4,7 @@ import {
   type Credentials,
 } from '@/application/ports/AuthProvider';
 import { Clock } from '@/application/ports/Clock';
+import { EmailSender } from '@/application/ports/EmailSender';
 import { IdGenerator } from '@/application/ports/IdGenerator';
 import { UserRepository } from '@/application/ports/UserRepository';
 import { Saga } from '@/application/services/Saga';
@@ -25,6 +26,7 @@ export class SignUpUseCase {
     private readonly ids: IdGenerator,
     private readonly clock: Clock,
     private readonly saga: Saga,
+    private readonly emails: EmailSender,
   ) {}
 
   async execute({ account, profile }: Input): Promise<AuthTokens> {
@@ -48,6 +50,16 @@ export class SignUpUseCase {
       );
     });
 
+    await this.sendWelcomeEmail(account.email, profile.name);
+
     return this.auth.signIn(account);
+  }
+
+  private async sendWelcomeEmail(to: string, name: string): Promise<void> {
+    try {
+      await this.emails.send({ to, template: 'WELCOME', data: { name } });
+    } catch (error) {
+      console.error('Failed to send welcome email.', error);
+    }
   }
 }

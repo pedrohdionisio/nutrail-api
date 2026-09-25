@@ -4,6 +4,9 @@ export class AppConfig {
     userPoolId: required('COGNITO_USER_POOL_ID'),
     clientId: required('COGNITO_CLIENT_ID'),
   };
+  readonly email = {
+    from: required('EMAIL_FROM'),
+  };
 }
 
 function required(name: string): string {

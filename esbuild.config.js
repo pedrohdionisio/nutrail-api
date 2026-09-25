@@ -24,4 +24,7 @@ const swcDecoratorMetadata = {
 
 export default () => ({
   plugins: [swcDecoratorMetadata],
+  banner: {
+    js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);",
+  },
 });

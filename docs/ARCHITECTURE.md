@@ -25,7 +25,7 @@ App de controle de calorias e macros (calorias, proteínas, carboidratos e gordu
 **API**
 - Node.js + TypeScript
 - AWS 100% serverless com Serverless Framework
-- Lambda, API Gateway (HTTP API), DynamoDB (single-table), S3, SQS (+ DLQ), Cognito
+- Lambda, API Gateway (HTTP API), DynamoDB (single-table), S3, SQS (+ DLQ), Cognito, SES
 - OpenAI para análise de refeições, transcrição de áudio e geração de receitas
 - Zod para validação
 - ULID para ids
@@ -143,6 +143,7 @@ type Ingredient = {
 - **Cognito** com fluxo padrão. A API usa **apenas o access token**.
 - O app **sempre passa pela API** para sign-up, sign-in, refresh e forgot password.
 - O `id` do usuário é um ULID próprio. O `sub` do Cognito fica salvo como `externalId`.
+- O e-mail com o código de recuperação de senha continua sendo enviado pelo Cognito, mas o conteúdo vem do trigger `CustomMessage`, que renderiza o template `ForgotPassword` de `infra/email/templates`.
 
 ### 4.1 Resolução do usuário (`sub` → `userId`)
 
@@ -167,7 +168,8 @@ O sign-up acontece no fim do onboarding e recebe dados da conta e do perfil junt
 3. `SignUp` no Cognito → retorna o `sub`.
 4. Registra a compensação na Saga: `AuthProvider.deleteUser(sub)`.
 5. `PutItem` do PROFILE, com `externalId = sub` e `GSI1PK = COGNITO#{sub}`.
-6. Sign-in e retorno dos tokens.
+6. Envio do e-mail de boas-vindas pelo `EmailSender`, fora da Saga. Uma falha no envio é logada e não desfaz o cadastro.
+7. Sign-in e retorno dos tokens.
 
 Se o passo 5 falhar, a Saga remove o usuário do Cognito, evitando um usuário sem perfil. Como as metas estão embutidas no PROFILE, é uma gravação só e não precisa de UnitOfWork.
 
@@ -203,6 +205,7 @@ src/
 │   ├── queue/             # SqsMealProcessingQueue
 │   ├── ai/                # OpenAI*, prompts, schemas de resposta
 │   ├── auth/              # CognitoAuthProvider, DynamoUserIdResolver
+│   ├── email/             # SesEmailSender, templates/ em React Email (pnpm dev:email para preview)
 │   └── shared/            # UlidIdGenerator, SystemClock
 ├── presentation/
 │   ├── controllers/       # controllers + schemas zod
@@ -234,6 +237,7 @@ Convenção de nomes: o port tem o nome "limpo" e a implementação leva o prefi
 | `GetProfileQuery` | `DynamoGetProfileQuery` | singleton |
 | `UserIdResolver` | `DynamoUserIdResolver` | singleton (cache) |
 | `AuthProvider` | `CognitoAuthProvider` | singleton |
+| `EmailSender` | `SesEmailSender` | singleton |
 | `FileStorage` | `S3FileStorage` | singleton |
 | `MealProcessingQueue` | `SqsMealProcessingQueue` | singleton |
 | `MealAnalyzer` (`analyzeImage`, `analyzeText`) | `OpenAIMealAnalyzer` | singleton |
@@ -243,7 +247,7 @@ Convenção de nomes: o port tem o nome "limpo" e a implementação leva o prefi
 | `Clock` | `SystemClock` | singleton |
 | `Saga` | `Saga` | **transient** |
 
-Os clients da AWS e da OpenAI (`DynamoDBDocumentClient`, `S3Client`, `SQSClient`, `CognitoIdentityProviderClient`, `OpenAI`) também são injetados via container (factory, singleton). Nunca importados como singleton de módulo.
+Os clients da AWS e da OpenAI (`DynamoDBDocumentClient`, `S3Client`, `SQSClient`, `CognitoIdentityProviderClient`, `SESv2Client`, `OpenAI`) também são injetados via container (factory, singleton). Nunca importados como singleton de módulo.
 
 `Clock` existe porque a data local da refeição e o cálculo de idade dependem de "agora". Com ele, os testes controlam o tempo.
 

@@ -1,8 +1,10 @@
 import { CognitoIdentityProviderClient } from '@aws-sdk/client-cognito-identity-provider';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { SESv2Client } from '@aws-sdk/client-sesv2';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { AuthProvider } from '@/application/ports/AuthProvider';
 import { Clock } from '@/application/ports/Clock';
+import { EmailSender } from '@/application/ports/EmailSender';
 import { IdGenerator } from '@/application/ports/IdGenerator';
 import { UserIdResolver } from '@/application/ports/UserIdResolver';
 import { UserRepository } from '@/application/ports/UserRepository';
@@ -16,6 +18,7 @@ import { GoalCalculator } from '@/domain/services/GoalCalculator';
 import { CognitoAuthProvider } from '@/infra/auth/CognitoAuthProvider';
 import { DynamoUserIdResolver } from '@/infra/auth/DynamoUserIdResolver';
 import { DynamoUserRepository } from '@/infra/database/dynamo/DynamoUserRepository';
+import { SesEmailSender } from '@/infra/email/SesEmailSender';
 import { SystemClock } from '@/infra/shared/SystemClock';
 import { UlidIdGenerator } from '@/infra/shared/UlidIdGenerator';
 import { Container } from '@/kernel/di/Container';
@@ -43,7 +46,8 @@ container
     CognitoIdentityProviderClient,
     () => new CognitoIdentityProviderClient({}),
     { scope: 'singleton' },
-  );
+  )
+  .bindFactory(SESv2Client, () => new SESv2Client({}), { scope: 'singleton' });
 
 container
   .bind(IdGenerator, UlidIdGenerator, { scope: 'singleton' })
@@ -52,6 +56,7 @@ container
   .bind(UserRepository, DynamoUserRepository, { scope: 'singleton' })
   .bind(UserIdResolver, DynamoUserIdResolver, { scope: 'singleton' })
   .bind(AuthProvider, CognitoAuthProvider, { scope: 'singleton' })
+  .bind(EmailSender, SesEmailSender, { scope: 'singleton' })
   .bind(Saga, Saga, { scope: 'transient' });
 
 container

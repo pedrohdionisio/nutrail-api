@@ -1,0 +1,2 @@
+customMessage:
+  handler: src/main/functions/customMessage.handler
