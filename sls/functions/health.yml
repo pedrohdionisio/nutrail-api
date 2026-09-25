@@ -1,0 +1,6 @@
+health:
+  handler: src/main/functions/health.handler
+  events:
+    - httpApi:
+        method: GET
+        path: /health

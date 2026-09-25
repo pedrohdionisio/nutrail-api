@@ -1,0 +1,53 @@
+service: nutrail-api
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: nodejs24.x
+  architecture: arm64
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  memorySize: 512
+  timeout: 10
+  environment:
+    TABLE_NAME: !Ref MainTable
+    BUCKET_NAME: !Ref FilesBucket
+    MEAL_QUEUE_URL: !Ref MealProcessingQueue
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:Query
+          Resource:
+            - !GetAtt MainTable.Arn
+            - !Join ['/', [!GetAtt MainTable.Arn, 'index', '*']]
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+            - s3:PutObject
+          Resource: !Join ['/', [!GetAtt FilesBucket.Arn, '*']]
+        - Effect: Allow
+          Action:
+            - sqs:SendMessage
+          Resource: !GetAtt MealProcessingQueue.Arn
+
+build:
+  esbuild:
+    configFile: ./esbuild.config.js
+    minify: true
+    sourcemap:
+      type: linked
+      setNodeOptions: true
+
+functions:
+  - ${file(sls/functions/health.yml)}
+
+resources:
+  - ${file(sls/resources/dynamodb.yml)}
+  - ${file(sls/resources/s3.yml)}
+  - ${file(sls/resources/sqs.yml)}
