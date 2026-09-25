@@ -245,6 +245,7 @@ Convenção de nomes: o port tem o nome "limpo" e a implementação leva o prefi
 | `MealAnalyzer` (`analyzeImage`, `analyzeText`) | `OpenAIMealAnalyzer` | singleton |
 | `Transcriber` | `OpenAITranscriber` | singleton |
 | `RecipeGenerator` | `OpenAIRecipeGenerator` | singleton |
+| `ListRecipesQuery` | `DynamoListRecipesQuery` | singleton |
 | `IdGenerator` | `UlidIdGenerator` | singleton |
 | `Clock` | `SystemClock` | singleton |
 | `Saga` | `Saga` | **transient** |
@@ -391,7 +392,7 @@ Fila com **DLQ** e alarme no CloudWatch para mensagens na DLQ.
 
 ### 7.3 Sugestão e salvamento de receita (síncrono)
 
-1. `SuggestRecipeUseCase` recebe os ingredientes e a data local:
+1. `SuggestRecipeUseCase` recebe o texto com o que o usuário tem em casa e a data local:
    - Lê as metas (`GetProfileQuery`) e o consumo do dia (`ListMealsByDayQuery`)
    - Calcula o restante do dia
    - Chama o `RecipeGenerator`
@@ -399,6 +400,15 @@ Fila com **DLQ** e alarme no CloudWatch para mensagens na DLQ.
 2. Se o usuário aceitar, o app envia a receita de volta e o `SaveRecipeUseCase` grava.
 
 O cliente reenvia a receita inteira. O risco de adulteração dos macros é aceitável, porque os dados são do próprio usuário, e isso evita guardar rascunhos.
+
+**Detalhes**
+- `POST /recipes/suggestions` recebe `{ date, text }`, com o texto livre do que o usuário tem em casa (até 1000 caracteres, ex.: "tenho metade de um queijo mussarela, uns 5 ovos..."), e devolve `{ recipe }`. A IA extrai os alimentos e trata as quantidades citadas como limite. O restante do dia é `meta - consumido` por macro, nunca abaixo de zero; o consumo considera só refeições em `SUCCESS`.
+- **Tamanho da receita:** quem decide é o usuário, no próprio texto ("monte uma receita com cerca de 400 kcal"). Sem pedido, a receita é uma porção normal de **no máximo ~500 kcal**; passa disso só se o usuário pedir. O restante do dia serve só para equilibrar os macros (ex.: priorizar proteína) e nunca reduz a porção.
+- A receita é sempre montada em volta dos alimentos citados; itens de despensa só temperam ou cozinham.
+- Pode usar itens básicos de despensa (sal, temperos, água, um pouco de óleo ou manteiga) além dos informados. Nome, ingredientes e passos saem no idioma do texto. `instructions` são passos numerados, um por linha.
+- Nenhum alimento no texto → 422 `NO_FOOD_INGREDIENTS`. Resposta vazia do modelo → 502 `RECIPE_GENERATION_FAILED`.
+- Modelo `gpt-6-luna` com `reasoning.effort: low`; Lambda com timeout de 29 s, como a refeição manual.
+- `GET /recipes` devolve todas as receitas, da mais nova para a mais antiga (`ScanIndexForward: false`; o id é ULID).
 
 **Migração futura para a fila:** mesma estratégia das refeições manuais, se a geração ficar lenta.
 

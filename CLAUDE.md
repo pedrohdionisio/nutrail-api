@@ -7,7 +7,7 @@ A fonte de verdade da arquitetura é [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md
 - Gerenciador de pacotes: **pnpm**. Nunca usar npm ou yarn.
 - Lint e formatação: **Biome** (`pnpm lint`, `pnpm lint:fix`). Não adicionar ESLint nem Prettier.
 - Tipos: `pnpm typecheck`. Rodar `pnpm lint` e `pnpm typecheck` antes de considerar uma tarefa concluída.
-- Deploy: Serverless Framework v4, região `us-east-1`, runtime `nodejs24.x`.
+- Deploy: Serverless Framework v4, região `us-east-1`, runtime `nodejs24.x`. Empacotamento por função (`package.individually: true`): cada bundle carrega o container inteiro, e um zip único estoura o limite de 250 MB da Lambda.
 - Novas funções ficam em `sls/functions/*.yml` e novos recursos em `sls/resources/*.yml`, ambos referenciados no `serverless.yml`.
 
 ## Código

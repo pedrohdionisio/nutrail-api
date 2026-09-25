@@ -57,6 +57,9 @@ provider:
             - ses:SendEmail
           Resource: !Join ['', ['arn:aws:ses:', !Ref AWS::Region, ':', !Ref AWS::AccountId, ':identity/*']]
 
+package:
+  individually: true
+
 build:
   esbuild:
     configFile: ./esbuild.config.js
@@ -83,6 +86,9 @@ functions:
   - ${file(sls/functions/createMealPictureUpload.yml)}
   - ${file(sls/functions/mealUploaded.yml)}
   - ${file(sls/functions/processMeal.yml)}
+  - ${file(sls/functions/suggestRecipe.yml)}
+  - ${file(sls/functions/saveRecipe.yml)}
+  - ${file(sls/functions/listRecipes.yml)}
 
 resources:
   - ${file(sls/resources/dynamodb.yml)}

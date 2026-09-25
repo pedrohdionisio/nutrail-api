@@ -1,0 +1,8 @@
+saveRecipe:
+  handler: src/main/functions/saveRecipe.handler
+  events:
+    - httpApi:
+        method: POST
+        path: /recipes
+        authorizer:
+          name: cognito

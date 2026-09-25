@@ -13,9 +13,12 @@ import { GetMealQuery } from '@/application/ports/GetMealQuery';
 import { GetProfileQuery } from '@/application/ports/GetProfileQuery';
 import { IdGenerator } from '@/application/ports/IdGenerator';
 import { ListMealsByDayQuery } from '@/application/ports/ListMealsByDayQuery';
+import { ListRecipesQuery } from '@/application/ports/ListRecipesQuery';
 import { MealAnalyzer } from '@/application/ports/MealAnalyzer';
 import { MealProcessingQueue } from '@/application/ports/MealProcessingQueue';
 import { MealRepository } from '@/application/ports/MealRepository';
+import { RecipeGenerator } from '@/application/ports/RecipeGenerator';
+import { RecipeRepository } from '@/application/ports/RecipeRepository';
 import { Transcriber } from '@/application/ports/Transcriber';
 import { UserIdResolver } from '@/application/ports/UserIdResolver';
 import { UserRepository } from '@/application/ports/UserRepository';
@@ -32,15 +35,20 @@ import { CreateMealUseCase } from '@/application/usecases/meals/CreateMealUseCas
 import { MealUploadedUseCase } from '@/application/usecases/meals/MealUploadedUseCase';
 import { ProcessMealUseCase } from '@/application/usecases/meals/ProcessMealUseCase';
 import { UpdateProfileUseCase } from '@/application/usecases/profile/UpdateProfileUseCase';
+import { SaveRecipeUseCase } from '@/application/usecases/recipes/SaveRecipeUseCase';
+import { SuggestRecipeUseCase } from '@/application/usecases/recipes/SuggestRecipeUseCase';
 import { GoalCalculator } from '@/domain/services/GoalCalculator';
 import { OpenAIMealAnalyzer } from '@/infra/ai/OpenAIMealAnalyzer';
+import { OpenAIRecipeGenerator } from '@/infra/ai/OpenAIRecipeGenerator';
 import { OpenAITranscriber } from '@/infra/ai/OpenAITranscriber';
 import { CognitoAuthProvider } from '@/infra/auth/CognitoAuthProvider';
 import { DynamoUserIdResolver } from '@/infra/auth/DynamoUserIdResolver';
 import { DynamoGetMealQuery } from '@/infra/database/dynamo/DynamoGetMealQuery';
 import { DynamoGetProfileQuery } from '@/infra/database/dynamo/DynamoGetProfileQuery';
 import { DynamoListMealsByDayQuery } from '@/infra/database/dynamo/DynamoListMealsByDayQuery';
+import { DynamoListRecipesQuery } from '@/infra/database/dynamo/DynamoListRecipesQuery';
 import { DynamoMealRepository } from '@/infra/database/dynamo/DynamoMealRepository';
+import { DynamoRecipeRepository } from '@/infra/database/dynamo/DynamoRecipeRepository';
 import { DynamoUserRepository } from '@/infra/database/dynamo/DynamoUserRepository';
 import { SesEmailSender } from '@/infra/email/SesEmailSender';
 import { SqsMealProcessingQueue } from '@/infra/queue/SqsMealProcessingQueue';
@@ -62,6 +70,9 @@ import { CreateMealPictureUploadController } from '@/presentation/controllers/me
 import { GetMealController } from '@/presentation/controllers/meals/GetMealController';
 import { ListMealsByDayController } from '@/presentation/controllers/meals/ListMealsByDayController';
 import { UpdateProfileController } from '@/presentation/controllers/profile/UpdateProfileController';
+import { ListRecipesController } from '@/presentation/controllers/recipes/ListRecipesController';
+import { SaveRecipeController } from '@/presentation/controllers/recipes/SaveRecipeController';
+import { SuggestRecipeController } from '@/presentation/controllers/recipes/SuggestRecipeController';
 import { MealFileUploadedHandler } from '@/presentation/file-events/MealFileUploadedHandler';
 import { ProcessMealConsumer } from '@/presentation/queue-consumers/ProcessMealConsumer';
 import { AppConfig } from '@/shared/config/AppConfig';
@@ -108,6 +119,9 @@ container
   .bind(Transcriber, OpenAITranscriber, { scope: 'singleton' })
   .bind(FileStorage, S3FileStorage, { scope: 'singleton' })
   .bind(MealProcessingQueue, SqsMealProcessingQueue, { scope: 'singleton' })
+  .bind(RecipeRepository, DynamoRecipeRepository, { scope: 'singleton' })
+  .bind(RecipeGenerator, OpenAIRecipeGenerator, { scope: 'singleton' })
+  .bind(ListRecipesQuery, DynamoListRecipesQuery, { scope: 'singleton' })
   .bind(ListMealsByDayQuery, DynamoListMealsByDayQuery, { scope: 'singleton' })
   .bind(GetMealQuery, DynamoGetMealQuery, { scope: 'singleton' })
   .bind(UserIdResolver, DynamoUserIdResolver, { scope: 'singleton' })
@@ -133,7 +147,9 @@ container
     scope: 'singleton',
   })
   .bind(MealUploadedUseCase, MealUploadedUseCase, { scope: 'singleton' })
-  .bind(ProcessMealUseCase, ProcessMealUseCase, { scope: 'singleton' });
+  .bind(ProcessMealUseCase, ProcessMealUseCase, { scope: 'singleton' })
+  .bind(SuggestRecipeUseCase, SuggestRecipeUseCase, { scope: 'singleton' })
+  .bind(SaveRecipeUseCase, SaveRecipeUseCase, { scope: 'singleton' });
 
 container
   .bind(HealthController, HealthController, { scope: 'transient' })
@@ -161,7 +177,12 @@ container
   .bind(CreateMealController, CreateMealController, { scope: 'transient' })
   .bind(CreateMealPictureUploadController, CreateMealPictureUploadController, {
     scope: 'transient',
-  });
+  })
+  .bind(SuggestRecipeController, SuggestRecipeController, {
+    scope: 'transient',
+  })
+  .bind(SaveRecipeController, SaveRecipeController, { scope: 'transient' })
+  .bind(ListRecipesController, ListRecipesController, { scope: 'transient' });
 
 container
   .bind(MealFileUploadedHandler, MealFileUploadedHandler, {

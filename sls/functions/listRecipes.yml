@@ -1,0 +1,8 @@
+listRecipes:
+  handler: src/main/functions/listRecipes.handler
+  events:
+    - httpApi:
+        method: GET
+        path: /recipes
+        authorizer:
+          name: cognito

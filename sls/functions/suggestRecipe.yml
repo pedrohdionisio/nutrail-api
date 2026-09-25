@@ -1,0 +1,9 @@
+suggestRecipe:
+  handler: src/main/functions/suggestRecipe.handler
+  timeout: 29
+  events:
+    - httpApi:
+        method: POST
+        path: /recipes/suggestions
+        authorizer:
+          name: cognito
