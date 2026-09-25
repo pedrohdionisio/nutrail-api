@@ -16,6 +16,7 @@ provider:
     COGNITO_USER_POOL_ID: !Ref UserPool
     COGNITO_CLIENT_ID: !Ref UserPoolClient
     EMAIL_FROM: 'Nutrail <pedrohenriquedionisioalves@gmail.com>'
+    OPENAI_API_KEY: ${env:OPENAI_API_KEY}
   httpApi:
     authorizers:
       cognito:
@@ -75,6 +76,7 @@ functions:
   - ${file(sls/functions/getMe.yml)}
   - ${file(sls/functions/updateProfile.yml)}
   - ${file(sls/functions/updateGoals.yml)}
+  - ${file(sls/functions/createManualMeal.yml)}
 
 resources:
   - ${file(sls/resources/dynamodb.yml)}

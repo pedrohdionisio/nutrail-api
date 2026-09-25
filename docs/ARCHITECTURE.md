@@ -85,7 +85,7 @@ As metas ficam embutidas no item do usuário porque a home sempre precisa das du
 | Atributo | Tipo | Observação |
 |---|---|---|
 | `id` | string | ULID |
-| `name` | string | Gerado pela IA (ex.: "Almoço Fitness") |
+| `name` | string | Tipo da refeição, gerado pela IA (ex.: "Almoço") |
 | `items` | `Item[]` | |
 | `calories`, `protein`, `carbohydrate`, `fat` | number | Totais, **sempre derivados dos itens** |
 | `status` | enum | `UPLOADING` \| `QUEUED` \| `PROCESSING` \| `SUCCESS` \| `FAILED` |
@@ -370,6 +370,9 @@ Fila com **DLQ** e alarme no CloudWatch para mensagens na DLQ.
 ### 7.2 Refeição manual (síncrono)
 
 1. `POST /meals/manual` → `CreateManualMealUseCase`: salva `inputText`, chama `MealAnalyzer.analyzeText()` na própria requisição, `complete(result)`, salva com `SUCCESS`.
+   - A meal nasce em `PROCESSING` em memória e só é gravada uma vez, já em `SUCCESS`. Se a análise falhar (502 `MEAL_ANALYSIS_FAILED`) ou não identificar nenhum alimento (422 `MEAL_WITHOUT_ITEMS`), nada é gravado e o app pode reenviar.
+   - O app envia também o horário local (`time`, `HH:mm`), usado só na análise e não persistido. O nome da meal é o tipo da refeição: o que o usuário disser explicitamente ("almocei...") ou, se ele não disser, o deduzido pelo horário (faixas definidas no prompt).
+   - Modelo `gpt-6-luna` com `reasoning.effort: low` e Structured Outputs. O client da OpenAI tem timeout de 25 s e 1 retry, e a Lambda tem timeout de 29 s (o HTTP API corta em 30 s).
 2. Se o usuário quiser foto de registro, recebe um presigned POST para `pictures/`. O evento desse upload é ignorado (a meal já está em `SUCCESS`).
 
 **Migração futura para a fila:** como o texto fica em `inputText` e o `ProcessMealUseCase` já sabe processar texto, mover para o fluxo assíncrono é trocar a chamada direta ao analyzer por `MealProcessingQueue.publish()`.

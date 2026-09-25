@@ -7,6 +7,9 @@ export class AppConfig {
   readonly email = {
     from: required('EMAIL_FROM'),
   };
+  readonly openai = {
+    apiKey: required('OPENAI_API_KEY'),
+  };
 }
 
 function required(name: string): string {

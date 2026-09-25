@@ -2,11 +2,14 @@ import { CognitoIdentityProviderClient } from '@aws-sdk/client-cognito-identity-
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { SESv2Client } from '@aws-sdk/client-sesv2';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
+import OpenAI from 'openai';
 import { AuthProvider } from '@/application/ports/AuthProvider';
 import { Clock } from '@/application/ports/Clock';
 import { EmailSender } from '@/application/ports/EmailSender';
 import { GetProfileQuery } from '@/application/ports/GetProfileQuery';
 import { IdGenerator } from '@/application/ports/IdGenerator';
+import { MealAnalyzer } from '@/application/ports/MealAnalyzer';
+import { MealRepository } from '@/application/ports/MealRepository';
 import { UserIdResolver } from '@/application/ports/UserIdResolver';
 import { UserRepository } from '@/application/ports/UserRepository';
 import { Saga } from '@/application/services/Saga';
@@ -16,11 +19,14 @@ import { RefreshTokenUseCase } from '@/application/usecases/auth/RefreshTokenUse
 import { SignInUseCase } from '@/application/usecases/auth/SignInUseCase';
 import { SignUpUseCase } from '@/application/usecases/auth/SignUpUseCase';
 import { UpdateGoalsUseCase } from '@/application/usecases/goals/UpdateGoalsUseCase';
+import { CreateManualMealUseCase } from '@/application/usecases/meals/CreateManualMealUseCase';
 import { UpdateProfileUseCase } from '@/application/usecases/profile/UpdateProfileUseCase';
 import { GoalCalculator } from '@/domain/services/GoalCalculator';
+import { OpenAIMealAnalyzer } from '@/infra/ai/OpenAIMealAnalyzer';
 import { CognitoAuthProvider } from '@/infra/auth/CognitoAuthProvider';
 import { DynamoUserIdResolver } from '@/infra/auth/DynamoUserIdResolver';
 import { DynamoGetProfileQuery } from '@/infra/database/dynamo/DynamoGetProfileQuery';
+import { DynamoMealRepository } from '@/infra/database/dynamo/DynamoMealRepository';
 import { DynamoUserRepository } from '@/infra/database/dynamo/DynamoUserRepository';
 import { SesEmailSender } from '@/infra/email/SesEmailSender';
 import { SystemClock } from '@/infra/shared/SystemClock';
@@ -34,6 +40,7 @@ import { SignUpController } from '@/presentation/controllers/auth/SignUpControll
 import { UpdateGoalsController } from '@/presentation/controllers/goals/UpdateGoalsController';
 import { HealthController } from '@/presentation/controllers/HealthController';
 import { GetMeController } from '@/presentation/controllers/me/GetMeController';
+import { CreateManualMealController } from '@/presentation/controllers/meals/CreateManualMealController';
 import { UpdateProfileController } from '@/presentation/controllers/profile/UpdateProfileController';
 import { AppConfig } from '@/shared/config/AppConfig';
 
@@ -54,7 +61,17 @@ container
     () => new CognitoIdentityProviderClient({}),
     { scope: 'singleton' },
   )
-  .bindFactory(SESv2Client, () => new SESv2Client({}), { scope: 'singleton' });
+  .bindFactory(SESv2Client, () => new SESv2Client({}), { scope: 'singleton' })
+  .bindFactory(
+    OpenAI,
+    (c) =>
+      new OpenAI({
+        apiKey: c.resolve(AppConfig).openai.apiKey,
+        timeout: 25_000,
+        maxRetries: 1,
+      }),
+    { scope: 'singleton' },
+  );
 
 container
   .bind(IdGenerator, UlidIdGenerator, { scope: 'singleton' })
@@ -62,6 +79,8 @@ container
   .bind(GoalCalculator, GoalCalculator, { scope: 'singleton' })
   .bind(UserRepository, DynamoUserRepository, { scope: 'singleton' })
   .bind(GetProfileQuery, DynamoGetProfileQuery, { scope: 'singleton' })
+  .bind(MealRepository, DynamoMealRepository, { scope: 'singleton' })
+  .bind(MealAnalyzer, OpenAIMealAnalyzer, { scope: 'singleton' })
   .bind(UserIdResolver, DynamoUserIdResolver, { scope: 'singleton' })
   .bind(AuthProvider, CognitoAuthProvider, { scope: 'singleton' })
   .bind(EmailSender, SesEmailSender, { scope: 'singleton' })
@@ -76,7 +95,10 @@ container
     scope: 'singleton',
   })
   .bind(UpdateProfileUseCase, UpdateProfileUseCase, { scope: 'singleton' })
-  .bind(UpdateGoalsUseCase, UpdateGoalsUseCase, { scope: 'singleton' });
+  .bind(UpdateGoalsUseCase, UpdateGoalsUseCase, { scope: 'singleton' })
+  .bind(CreateManualMealUseCase, CreateManualMealUseCase, {
+    scope: 'singleton',
+  });
 
 container
   .bind(HealthController, HealthController, { scope: 'transient' })
@@ -93,6 +115,9 @@ container
   .bind(UpdateProfileController, UpdateProfileController, {
     scope: 'transient',
   })
-  .bind(UpdateGoalsController, UpdateGoalsController, { scope: 'transient' });
+  .bind(UpdateGoalsController, UpdateGoalsController, { scope: 'transient' })
+  .bind(CreateManualMealController, CreateManualMealController, {
+    scope: 'transient',
+  });
 
 container.validate();
