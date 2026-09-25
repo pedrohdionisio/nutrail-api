@@ -1,4 +1,5 @@
 import {
+  DeleteObjectsCommand,
   GetObjectCommand,
   HeadObjectCommand,
   S3Client,
@@ -71,5 +72,16 @@ export class S3FileStorage implements FileStorage {
     );
 
     return Metadata ?? {};
+  }
+
+  async deleteMany(keys: string[]): Promise<void> {
+    if (keys.length === 0) return;
+
+    await this.client.send(
+      new DeleteObjectsCommand({
+        Bucket: this.config.bucketName,
+        Delete: { Objects: keys.map((key) => ({ Key: key })), Quiet: true },
+      }),
+    );
   }
 }

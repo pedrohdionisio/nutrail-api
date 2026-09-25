@@ -14,4 +14,6 @@ export abstract class FileStorage {
   abstract getReadUrl(key: string): Promise<string>;
 
   abstract getMetadata(key: string): Promise<Record<string, string>>;
+
+  abstract deleteMany(keys: string[]): Promise<void>;
 }

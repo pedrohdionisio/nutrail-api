@@ -1,0 +1,8 @@
+deleteMeal:
+  handler: src/main/functions/deleteMeal.handler
+  events:
+    - httpApi:
+        method: DELETE
+        path: /meals/{mealId}
+        authorizer:
+          name: cognito

@@ -6,4 +6,6 @@ export abstract class MealRepository {
   abstract create(meal: Meal): Promise<void>;
 
   abstract update(meal: Meal): Promise<void>;
+
+  abstract delete(userId: string, mealId: string): Promise<void>;
 }

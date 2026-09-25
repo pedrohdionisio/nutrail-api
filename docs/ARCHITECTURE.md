@@ -320,6 +320,7 @@ container.bind(CreateMealUseCase, CreateMealUseCase, { scope: 'transient' });
 - **Entidades ricas:** as transições de status da `Meal` são métodos da entidade (`markAsQueued()`, `markAsProcessing()`, `complete(result)`, `fail()`), que validam a transição. Os use cases não setam `status` diretamente.
 - **Totais derivados:** os macros totais da `Meal` são sempre calculados a partir de `items`. Editar um item recalcula os totais sem chamar a IA.
 - **Edição:** `PUT /meals/{mealId}` substitui `name` e `items` (os macros de cada item vêm do app) e devolve os totais recalculados. Só meals em `SUCCESS` podem ser editadas (`edit()`), e sempre com pelo menos um item.
+- **Exclusão:** `DELETE /meals/{mealId}` apaga primeiro os arquivos no S3 (`inputFileKey` e `pictureKey`) e depois o item, para que uma falha no meio nunca deixe arquivos órfãos sem meal (o usuário pode repetir a exclusão). Uma meal excluída durante o processamento não é recriada: as gravações do processamento exigem que o item exista (`attribute_exists`).
 - **`GoalCalculator`:** serviço de domínio puro que calcula calorias e macros a partir do perfil (idade, gênero, peso, altura, nível de atividade, objetivo). Recebe a data atual como parâmetro (vinda do `Clock`).
   - Taxa metabólica basal pela **Mifflin-St Jeor**, a equação mais validada para a população geral entre as que não exigem composição corporal. Idade exata, considerando mês e dia.
   - Gasto total = TMB × fator de atividade (1,2 a 1,9), mais ou menos 500 kcal conforme o objetivo.
@@ -430,6 +431,7 @@ O cliente reenvia a receita inteira. O risco de adulteração dos macros é acei
 | GET | `/meals?date=YYYY-MM-DD` | privada |
 | GET | `/meals/{mealId}` | privada |
 | PUT | `/meals/{mealId}` | privada |
+| DELETE | `/meals/{mealId}` | privada |
 | POST | `/meals/{mealId}/picture` | privada |
 | POST | `/recipes/suggestions` | privada |
 | POST | `/recipes` | privada |

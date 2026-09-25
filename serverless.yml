@@ -41,6 +41,7 @@ provider:
           Action:
             - s3:GetObject
             - s3:PutObject
+            - s3:DeleteObject
           Resource: !Join ['/', [!GetAtt FilesBucket.Arn, '*']]
         - Effect: Allow
           Action:
@@ -85,6 +86,7 @@ functions:
   - ${file(sls/functions/createMeal.yml)}
   - ${file(sls/functions/createMealPictureUpload.yml)}
   - ${file(sls/functions/updateMeal.yml)}
+  - ${file(sls/functions/deleteMeal.yml)}
   - ${file(sls/functions/mealUploaded.yml)}
   - ${file(sls/functions/processMeal.yml)}
   - ${file(sls/functions/suggestRecipe.yml)}

@@ -1,4 +1,5 @@
 import {
+  DeleteCommand,
   DynamoDBDocumentClient,
   GetCommand,
   PutCommand,
@@ -48,6 +49,15 @@ export class DynamoMealRepository implements MealRepository {
 
   async update(meal: Meal): Promise<void> {
     await this.put(meal, 'attribute_exists(PK)');
+  }
+
+  async delete(userId: string, mealId: string): Promise<void> {
+    await this.client.send(
+      new DeleteCommand({
+        TableName: this.config.tableName,
+        Key: { PK: `USER#${userId}`, SK: `MEAL#${mealId}` },
+      }),
+    );
   }
 
   private async put(meal: Meal, condition: string): Promise<void> {
