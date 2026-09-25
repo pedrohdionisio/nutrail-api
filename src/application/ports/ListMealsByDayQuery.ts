@@ -5,6 +5,7 @@ export type MealSummary = Macros & {
   id: string;
   name: string;
   inputType: MealInputType;
+  pictureKey: string | null;
   createdAt: string;
 };
 

@@ -343,14 +343,15 @@ pictures/{userId}/{mealId}.jpg   # fotos de refeição (registro e/ou input de I
 
 - **Presigned POST** com condições: chave exata, `Content-Type` e `content-length-range`.
 - Metadata `x-amz-meta-userid` e `x-amz-meta-mealid` no objeto, para o handler do evento identificar a refeição.
-- Para leitura (app e OpenAI), gerar URL assinada a partir da chave.
+- Para leitura (app e OpenAI), gerar URL assinada (1 hora) a partir da chave. As leituras de meal (`GET /meals` e `GET /meals/{mealId}`) devolvem `pictureUrl`, nunca a chave.
+- Chaves, tipos (`image/jpeg`, `audio/m4a`) e limite de 10 MB ficam em `application/services/mealFiles.ts`.
 
 ### 6.3 Eventos e lifecycle
 
 - O bucket publica os eventos no **EventBridge**, e a regra `MealFileUploadedRule` filtra `Object Created` em **`inputs/` e `pictures/`** e chama a Lambda `mealUploaded`. A notificação nativa do S3 para a Lambda criaria um ciclo no CloudFormation (o bucket apontaria para a função, que já depende do bucket via `BUCKET_NAME`).
 - O handler lê os metadados do objeto (`HeadObject`) para achar a meal e confere que a chave é o `inputFileKey` dela.
 - O handler só segue para a fila se a meal estiver com `status = UPLOADING` e `inputType` for `PICTURE` ou `AUDIO`. Em qualquer outro caso (ex.: foto de registro de uma meal manual já em `SUCCESS`), o evento é ignorado.
-- **Lifecycle:** `inputs/` expira após alguns dias (o áudio não tem uso após a transcrição). `pictures/` é mantido.
+- **Lifecycle:** `inputs/` expira após 7 dias (o áudio não tem uso após a transcrição; a janela cobre a investigação de falhas). `pictures/` é mantido.
 
 ---
 
@@ -384,7 +385,7 @@ Fila com **DLQ** e alarme no CloudWatch para mensagens na DLQ.
    - A meal nasce em `PROCESSING` em memória e só é gravada uma vez, já em `SUCCESS`. Se a análise falhar (502 `MEAL_ANALYSIS_FAILED`) ou não identificar nenhum alimento (422 `MEAL_WITHOUT_ITEMS`), nada é gravado e o app pode reenviar.
    - O app envia também o horário local (`time`, `HH:mm`), persistido na meal. O nome da meal é o tipo da refeição: o que o usuário disser explicitamente ("almocei...") ou, se ele não disser, o deduzido pelo horário (faixas definidas no prompt).
    - Modelo `gpt-6-luna` com `reasoning.effort: low` e Structured Outputs. O client da OpenAI tem timeout de 25 s e 1 retry, e a Lambda tem timeout de 29 s (o HTTP API corta em 30 s).
-2. Se o usuário quiser foto de registro, recebe um presigned POST para `pictures/`. O evento desse upload é ignorado (a meal já está em `SUCCESS`).
+2. Se o usuário quiser foto de registro, `POST /meals/{mealId}/picture` devolve um presigned POST para `pictures/{userId}/{mealId}.jpg`. Vale para meals manuais e de áudio já finalizadas (`SUCCESS` ou `FAILED`); meals por foto recusam (409), porque a foto já é o input. O `pictureKey` só é gravado quando o evento do upload chega (`attachPicture()`), para nunca apontar para um arquivo inexistente. Exigir a meal finalizada evita que o processamento, que regrava o item inteiro, sobrescreva o `pictureKey`.
 
 **Migração futura para a fila:** como o texto fica em `inputText` e o `ProcessMealUseCase` já sabe processar texto, mover para o fluxo assíncrono é trocar a chamada direta ao analyzer por `MealProcessingQueue.publish()`.
 
@@ -449,6 +450,5 @@ O cliente reenvia a receita inteira. O risco de adulteração dos macros é acei
 ## 9. Pendências e decisões futuras
 
 - **Testes unitários** dos use cases com fakes em memória dos ports (a arquitetura já está preparada para isso).
-- **Servir arquivos** via URL assinada do S3 ou via CloudFront.
+- **Servir arquivos via CloudFront**, se as URLs assinadas do S3 ficarem caras ou lentas. O formato da resposta (`pictureUrl`) não muda.
 - **Mover a refeição manual e a sugestão de receita para a fila**, se a latência síncrona ficar ruim.
-- **Prazo do lifecycle** de `inputs/` no S3.

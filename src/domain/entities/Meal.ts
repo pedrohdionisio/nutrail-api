@@ -46,12 +46,12 @@ export class Meal {
   readonly userId: string;
   readonly inputType: MealInputType;
   readonly inputFileKey: string | null;
-  readonly pictureKey: string | null;
   readonly date: string;
   readonly time: string;
   readonly createdAt: string;
   private _status: MealStatus;
   private _inputText: string | null;
+  private _pictureKey: string | null;
   private _name: string | null;
   private _items: MealItem[];
   private _attempts: number;
@@ -61,12 +61,12 @@ export class Meal {
     this.userId = props.userId;
     this.inputType = props.inputType;
     this.inputFileKey = props.inputFileKey;
-    this.pictureKey = props.pictureKey;
     this.date = props.date;
     this.time = props.time;
     this.createdAt = props.createdAt;
     this._status = props.status;
     this._inputText = props.inputText;
+    this._pictureKey = props.pictureKey;
     this._name = props.name;
     this._items = props.items;
     this._attempts = props.attempts;
@@ -78,6 +78,14 @@ export class Meal {
 
   get inputText(): string | null {
     return this._inputText;
+  }
+
+  get pictureKey(): string | null {
+    return this._pictureKey;
+  }
+
+  get isFinished(): boolean {
+    return this._status === 'SUCCESS' || this._status === 'FAILED';
   }
 
   get attempts(): number {
@@ -121,6 +129,14 @@ export class Meal {
     }
 
     this._inputText = text;
+  }
+
+  attachPicture(key: string): void {
+    if (!this.isFinished) {
+      throw new InvalidMealTransitionError(this._status, 'picture attached');
+    }
+
+    this._pictureKey = key;
   }
 
   requeue(): void {

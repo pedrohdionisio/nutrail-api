@@ -13,7 +13,7 @@ import { Injectable } from '@/kernel/decorators/Injectable';
 import { AppConfig } from '@/shared/config/AppConfig';
 
 const UPLOAD_EXPIRATION_SECONDS = 10 * 60;
-const READ_EXPIRATION_SECONDS = 10 * 60;
+const READ_EXPIRATION_SECONDS = 60 * 60;
 
 @Injectable()
 export class S3FileStorage implements FileStorage {

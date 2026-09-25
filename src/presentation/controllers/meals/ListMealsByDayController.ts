@@ -1,3 +1,4 @@
+import { FileStorage } from '@/application/ports/FileStorage';
 import { ListMealsByDayQuery } from '@/application/ports/ListMealsByDayQuery';
 import { Injectable } from '@/kernel/decorators/Injectable';
 import {
@@ -9,7 +10,10 @@ import { listMealsByDaySchema } from './schemas/listMealsByDaySchema';
 
 @Injectable()
 export class ListMealsByDayController extends Controller<'private'> {
-  constructor(private readonly listMealsByDay: ListMealsByDayQuery) {
+  constructor(
+    private readonly listMealsByDay: ListMealsByDayQuery,
+    private readonly storage: FileStorage,
+  ) {
     super();
   }
 
@@ -23,6 +27,18 @@ export class ListMealsByDayController extends Controller<'private'> {
       date,
     });
 
-    return { statusCode: 200, body: { date, meals, totals } };
+    const mealsWithPictures = await Promise.all(
+      meals.map(async ({ pictureKey, ...meal }) => ({
+        ...meal,
+        pictureUrl: pictureKey
+          ? await this.storage.getReadUrl(pictureKey)
+          : null,
+      })),
+    );
+
+    return {
+      statusCode: 200,
+      body: { date, meals: mealsWithPictures, totals },
+    };
   }
 }

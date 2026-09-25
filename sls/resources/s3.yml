@@ -12,6 +12,12 @@ Resources:
       NotificationConfiguration:
         EventBridgeConfiguration:
           EventBridgeEnabled: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireMealAudioInputs
+            Status: Enabled
+            Prefix: inputs/
+            ExpirationInDays: 7
 
   MealFileUploadedRule:
     Type: AWS::Events::Rule

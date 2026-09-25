@@ -12,6 +12,7 @@ export type MealDetails = Macros & {
   inputType: MealInputType;
   date: string;
   items: MealItem[];
+  pictureKey: string | null;
   createdAt: string;
 };
 

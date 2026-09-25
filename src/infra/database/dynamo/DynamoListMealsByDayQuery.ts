@@ -16,6 +16,7 @@ const ATTRIBUTES = [
   'protein',
   'carbohydrate',
   'fat',
+  'pictureKey',
   'createdAt',
 ];
 
@@ -65,6 +66,7 @@ export class DynamoListMealsByDayQuery implements ListMealsByDayQuery {
           protein: item.protein,
           carbohydrate: item.carbohydrate,
           fat: item.fat,
+          pictureKey: item.pictureKey ?? null,
           createdAt: item.createdAt,
         });
       }

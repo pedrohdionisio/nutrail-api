@@ -1,0 +1,8 @@
+createMealPictureUpload:
+  handler: src/main/functions/createMealPictureUpload.handler
+  events:
+    - httpApi:
+        method: POST
+        path: /meals/{mealId}/picture
+        authorizer:
+          name: cognito

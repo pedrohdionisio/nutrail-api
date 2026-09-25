@@ -17,6 +17,7 @@ const ATTRIBUTES = [
   'protein',
   'carbohydrate',
   'fat',
+  'pictureKey',
   'createdAt',
 ];
 
@@ -58,6 +59,7 @@ export class DynamoGetMealQuery implements GetMealQuery {
       protein: Item.protein,
       carbohydrate: Item.carbohydrate,
       fat: Item.fat,
+      pictureKey: Item.pictureKey ?? null,
       createdAt: Item.createdAt,
     };
   }

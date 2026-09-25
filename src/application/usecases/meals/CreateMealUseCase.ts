@@ -5,21 +5,20 @@ import {
 } from '@/application/ports/FileStorage';
 import { IdGenerator } from '@/application/ports/IdGenerator';
 import { MealRepository } from '@/application/ports/MealRepository';
+import {
+  MAX_MEAL_FILE_SIZE_BYTES,
+  MEAL_FILES,
+  type MealFileType,
+  mealFileKey,
+} from '@/application/services/mealFiles';
 import { Meal } from '@/domain/entities/Meal';
 import { Injectable } from '@/kernel/decorators/Injectable';
-
-const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
-
-const UPLOADS = {
-  PICTURE: { folder: 'pictures', extension: 'jpg', contentType: 'image/jpeg' },
-  AUDIO: { folder: 'inputs', extension: 'm4a', contentType: 'audio/m4a' },
-};
 
 type Input = {
   userId: string;
   date: string;
   time: string;
-  inputType: keyof typeof UPLOADS;
+  inputType: MealFileType;
 };
 
 type Output = {
@@ -37,9 +36,8 @@ export class CreateMealUseCase {
   ) {}
 
   async execute({ userId, date, time, inputType }: Input): Promise<Output> {
-    const { folder, extension, contentType } = UPLOADS[inputType];
     const mealId = this.ids.generate();
-    const fileKey = `${folder}/${userId}/${mealId}.${extension}`;
+    const fileKey = mealFileKey(inputType, userId, mealId);
 
     await this.meals.create(
       new Meal({
@@ -61,8 +59,8 @@ export class CreateMealUseCase {
 
     const upload = await this.storage.createUpload({
       key: fileKey,
-      contentType,
-      maxSizeBytes: MAX_UPLOAD_SIZE_BYTES,
+      contentType: MEAL_FILES[inputType].contentType,
+      maxSizeBytes: MAX_MEAL_FILE_SIZE_BYTES,
       metadata: { userid: userId, mealid: mealId },
     });
 

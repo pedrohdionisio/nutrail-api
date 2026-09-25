@@ -1,6 +1,7 @@
+import { MealNotFoundError } from '@/application/errors/MealNotFoundError';
+import { FileStorage } from '@/application/ports/FileStorage';
 import { GetMealQuery } from '@/application/ports/GetMealQuery';
 import { Injectable } from '@/kernel/decorators/Injectable';
-import { HttpError } from '@/presentation/errors/HttpError';
 import {
   Controller,
   type ControllerRequest,
@@ -9,7 +10,10 @@ import {
 
 @Injectable()
 export class GetMealController extends Controller<'private'> {
-  constructor(private readonly getMeal: GetMealQuery) {
+  constructor(
+    private readonly getMeal: GetMealQuery,
+    private readonly storage: FileStorage,
+  ) {
     super();
   }
 
@@ -22,9 +26,15 @@ export class GetMealController extends Controller<'private'> {
       : null;
 
     if (!meal) {
-      throw new HttpError(404, 'MEAL_NOT_FOUND', 'Meal not found.');
+      throw new MealNotFoundError();
     }
 
-    return { statusCode: 200, body: meal };
+    const { pictureKey, ...details } = meal;
+
+    const pictureUrl = pictureKey
+      ? await this.storage.getReadUrl(pictureKey)
+      : null;
+
+    return { statusCode: 200, body: { ...details, pictureUrl } };
   }
 }

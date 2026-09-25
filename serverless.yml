@@ -80,6 +80,7 @@ functions:
   - ${file(sls/functions/listMealsByDay.yml)}
   - ${file(sls/functions/getMeal.yml)}
   - ${file(sls/functions/createMeal.yml)}
+  - ${file(sls/functions/createMealPictureUpload.yml)}
   - ${file(sls/functions/mealUploaded.yml)}
   - ${file(sls/functions/processMeal.yml)}
 

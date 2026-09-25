@@ -27,6 +27,7 @@ import { SignInUseCase } from '@/application/usecases/auth/SignInUseCase';
 import { SignUpUseCase } from '@/application/usecases/auth/SignUpUseCase';
 import { UpdateGoalsUseCase } from '@/application/usecases/goals/UpdateGoalsUseCase';
 import { CreateManualMealUseCase } from '@/application/usecases/meals/CreateManualMealUseCase';
+import { CreateMealPictureUploadUseCase } from '@/application/usecases/meals/CreateMealPictureUploadUseCase';
 import { CreateMealUseCase } from '@/application/usecases/meals/CreateMealUseCase';
 import { MealUploadedUseCase } from '@/application/usecases/meals/MealUploadedUseCase';
 import { ProcessMealUseCase } from '@/application/usecases/meals/ProcessMealUseCase';
@@ -57,6 +58,7 @@ import { HealthController } from '@/presentation/controllers/HealthController';
 import { GetMeController } from '@/presentation/controllers/me/GetMeController';
 import { CreateManualMealController } from '@/presentation/controllers/meals/CreateManualMealController';
 import { CreateMealController } from '@/presentation/controllers/meals/CreateMealController';
+import { CreateMealPictureUploadController } from '@/presentation/controllers/meals/CreateMealPictureUploadController';
 import { GetMealController } from '@/presentation/controllers/meals/GetMealController';
 import { ListMealsByDayController } from '@/presentation/controllers/meals/ListMealsByDayController';
 import { UpdateProfileController } from '@/presentation/controllers/profile/UpdateProfileController';
@@ -127,6 +129,9 @@ container
     scope: 'singleton',
   })
   .bind(CreateMealUseCase, CreateMealUseCase, { scope: 'singleton' })
+  .bind(CreateMealPictureUploadUseCase, CreateMealPictureUploadUseCase, {
+    scope: 'singleton',
+  })
   .bind(MealUploadedUseCase, MealUploadedUseCase, { scope: 'singleton' })
   .bind(ProcessMealUseCase, ProcessMealUseCase, { scope: 'singleton' });
 
@@ -153,7 +158,10 @@ container
     scope: 'transient',
   })
   .bind(GetMealController, GetMealController, { scope: 'transient' })
-  .bind(CreateMealController, CreateMealController, { scope: 'transient' });
+  .bind(CreateMealController, CreateMealController, { scope: 'transient' })
+  .bind(CreateMealPictureUploadController, CreateMealPictureUploadController, {
+    scope: 'transient',
+  });
 
 container
   .bind(MealFileUploadedHandler, MealFileUploadedHandler, {
