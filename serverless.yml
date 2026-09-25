@@ -72,6 +72,7 @@ functions:
   - ${file(sls/functions/forgotPassword.yml)}
   - ${file(sls/functions/confirmForgotPassword.yml)}
   - ${file(sls/functions/customMessage.yml)}
+  - ${file(sls/functions/getMe.yml)}
 
 resources:
   - ${file(sls/resources/dynamodb.yml)}

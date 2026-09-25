@@ -8,7 +8,7 @@ import { ApplicationError } from '@/application/errors/ApplicationError';
 import { UserIdResolver } from '@/application/ports/UserIdResolver';
 import { DomainError } from '@/domain/errors/DomainError';
 import type { Token } from '@/kernel/di/Container';
-import type { Access, Controller } from '@/presentation/controllers/Controller';
+import type { Controller } from '@/presentation/controllers/Controller';
 import { HttpError } from '@/presentation/errors/HttpError';
 import { container } from '../container';
 
@@ -17,7 +17,9 @@ type HttpEvent =
   | APIGatewayProxyEventV2WithJWTAuthorizer;
 
 export function lambdaHttpAdapter(
-  controllerClass: Token<Controller<Access, never>>,
+  controllerClass: Token<
+    Controller<'public', never> | Controller<'private', never>
+  >,
 ) {
   return async (event: HttpEvent): Promise<APIGatewayProxyResultV2> => {
     try {

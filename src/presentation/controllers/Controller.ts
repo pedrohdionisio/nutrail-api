@@ -19,7 +19,7 @@ export abstract class Controller<TAccess extends Access, TBody = unknown> {
   ): Promise<ControllerResponse>;
 
   execute(
-    request: ControllerRequest<TAccess, unknown>,
+    request: ControllerRequest<'public'> & { userId?: string },
   ): Promise<ControllerResponse> {
     const schema = getSchema(this.constructor);
     const body = schema ? schema.parse(request.body) : request.body;

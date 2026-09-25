@@ -5,6 +5,7 @@ import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { AuthProvider } from '@/application/ports/AuthProvider';
 import { Clock } from '@/application/ports/Clock';
 import { EmailSender } from '@/application/ports/EmailSender';
+import { GetProfileQuery } from '@/application/ports/GetProfileQuery';
 import { IdGenerator } from '@/application/ports/IdGenerator';
 import { UserIdResolver } from '@/application/ports/UserIdResolver';
 import { UserRepository } from '@/application/ports/UserRepository';
@@ -17,6 +18,7 @@ import { SignUpUseCase } from '@/application/usecases/auth/SignUpUseCase';
 import { GoalCalculator } from '@/domain/services/GoalCalculator';
 import { CognitoAuthProvider } from '@/infra/auth/CognitoAuthProvider';
 import { DynamoUserIdResolver } from '@/infra/auth/DynamoUserIdResolver';
+import { DynamoGetProfileQuery } from '@/infra/database/dynamo/DynamoGetProfileQuery';
 import { DynamoUserRepository } from '@/infra/database/dynamo/DynamoUserRepository';
 import { SesEmailSender } from '@/infra/email/SesEmailSender';
 import { SystemClock } from '@/infra/shared/SystemClock';
@@ -28,6 +30,7 @@ import { RefreshTokenController } from '@/presentation/controllers/auth/RefreshT
 import { SignInController } from '@/presentation/controllers/auth/SignInController';
 import { SignUpController } from '@/presentation/controllers/auth/SignUpController';
 import { HealthController } from '@/presentation/controllers/HealthController';
+import { GetMeController } from '@/presentation/controllers/me/GetMeController';
 import { AppConfig } from '@/shared/config/AppConfig';
 
 export const container = new Container();
@@ -54,6 +57,7 @@ container
   .bind(Clock, SystemClock, { scope: 'singleton' })
   .bind(GoalCalculator, GoalCalculator, { scope: 'singleton' })
   .bind(UserRepository, DynamoUserRepository, { scope: 'singleton' })
+  .bind(GetProfileQuery, DynamoGetProfileQuery, { scope: 'singleton' })
   .bind(UserIdResolver, DynamoUserIdResolver, { scope: 'singleton' })
   .bind(AuthProvider, CognitoAuthProvider, { scope: 'singleton' })
   .bind(EmailSender, SesEmailSender, { scope: 'singleton' })
@@ -78,6 +82,7 @@ container
   })
   .bind(ConfirmForgotPasswordController, ConfirmForgotPasswordController, {
     scope: 'transient',
-  });
+  })
+  .bind(GetMeController, GetMeController, { scope: 'transient' });
 
 container.validate();
