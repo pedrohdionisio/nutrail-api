@@ -411,6 +411,7 @@ O cliente reenvia a receita inteira. O risco de adulteração dos macros é acei
 - Pode usar itens básicos de despensa (sal, temperos, água, um pouco de óleo ou manteiga) além dos informados. Nome, ingredientes e passos saem no idioma do texto. `instructions` são passos numerados, um por linha.
 - Nenhum alimento no texto → 422 `NO_FOOD_INGREDIENTS`. Resposta vazia do modelo → 502 `RECIPE_GENERATION_FAILED`.
 - Modelo `gpt-6-luna` com `reasoning.effort: low`; Lambda com timeout de 29 s, como a refeição manual.
+- `DELETE /recipes/{recipeId}` apaga a receita (404 se não existir, verificado pelo `ALL_OLD` do próprio `DeleteItem`).
 - `GET /recipes` devolve todas as receitas, da mais nova para a mais antiga (`ScanIndexForward: false`; o id é ULID).
 
 **Migração futura para a fila:** mesma estratégia das refeições manuais, se a geração ficar lenta.
@@ -438,6 +439,7 @@ O cliente reenvia a receita inteira. O risco de adulteração dos macros é acei
 | POST | `/recipes/suggestions` | privada |
 | POST | `/recipes` | privada |
 | GET | `/recipes` | privada |
+| DELETE | `/recipes/{recipeId}` | privada |
 
 ---
 

@@ -38,6 +38,7 @@ import { ProcessMealUseCase } from '@/application/usecases/meals/ProcessMealUseC
 import { ReprocessMealUseCase } from '@/application/usecases/meals/ReprocessMealUseCase';
 import { UpdateMealUseCase } from '@/application/usecases/meals/UpdateMealUseCase';
 import { UpdateProfileUseCase } from '@/application/usecases/profile/UpdateProfileUseCase';
+import { DeleteRecipeUseCase } from '@/application/usecases/recipes/DeleteRecipeUseCase';
 import { SaveRecipeUseCase } from '@/application/usecases/recipes/SaveRecipeUseCase';
 import { SuggestRecipeUseCase } from '@/application/usecases/recipes/SuggestRecipeUseCase';
 import { GoalCalculator } from '@/domain/services/GoalCalculator';
@@ -76,6 +77,7 @@ import { ListMealsByDayController } from '@/presentation/controllers/meals/ListM
 import { ReprocessMealController } from '@/presentation/controllers/meals/ReprocessMealController';
 import { UpdateMealController } from '@/presentation/controllers/meals/UpdateMealController';
 import { UpdateProfileController } from '@/presentation/controllers/profile/UpdateProfileController';
+import { DeleteRecipeController } from '@/presentation/controllers/recipes/DeleteRecipeController';
 import { ListRecipesController } from '@/presentation/controllers/recipes/ListRecipesController';
 import { SaveRecipeController } from '@/presentation/controllers/recipes/SaveRecipeController';
 import { SuggestRecipeController } from '@/presentation/controllers/recipes/SuggestRecipeController';
@@ -158,7 +160,8 @@ container
   .bind(DeleteMealUseCase, DeleteMealUseCase, { scope: 'singleton' })
   .bind(ReprocessMealUseCase, ReprocessMealUseCase, { scope: 'singleton' })
   .bind(SuggestRecipeUseCase, SuggestRecipeUseCase, { scope: 'singleton' })
-  .bind(SaveRecipeUseCase, SaveRecipeUseCase, { scope: 'singleton' });
+  .bind(SaveRecipeUseCase, SaveRecipeUseCase, { scope: 'singleton' })
+  .bind(DeleteRecipeUseCase, DeleteRecipeUseCase, { scope: 'singleton' });
 
 container
   .bind(HealthController, HealthController, { scope: 'transient' })
@@ -196,7 +199,10 @@ container
     scope: 'transient',
   })
   .bind(SaveRecipeController, SaveRecipeController, { scope: 'transient' })
-  .bind(ListRecipesController, ListRecipesController, { scope: 'transient' });
+  .bind(ListRecipesController, ListRecipesController, { scope: 'transient' })
+  .bind(DeleteRecipeController, DeleteRecipeController, {
+    scope: 'transient',
+  });
 
 container
   .bind(MealFileUploadedHandler, MealFileUploadedHandler, {

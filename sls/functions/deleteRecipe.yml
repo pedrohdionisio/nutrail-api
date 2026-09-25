@@ -1,0 +1,8 @@
+deleteRecipe:
+  handler: src/main/functions/deleteRecipe.handler
+  events:
+    - httpApi:
+        method: DELETE
+        path: /recipes/{recipeId}
+        authorizer:
+          name: cognito

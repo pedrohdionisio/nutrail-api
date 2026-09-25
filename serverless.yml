@@ -93,6 +93,7 @@ functions:
   - ${file(sls/functions/suggestRecipe.yml)}
   - ${file(sls/functions/saveRecipe.yml)}
   - ${file(sls/functions/listRecipes.yml)}
+  - ${file(sls/functions/deleteRecipe.yml)}
 
 resources:
   - ${file(sls/resources/dynamodb.yml)}

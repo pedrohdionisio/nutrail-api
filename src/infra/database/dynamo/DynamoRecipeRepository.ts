@@ -1,4 +1,8 @@
-import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import {
+  DeleteCommand,
+  DynamoDBDocumentClient,
+  PutCommand,
+} from '@aws-sdk/lib-dynamodb';
 import type { RecipeRepository } from '@/application/ports/RecipeRepository';
 import type { Recipe } from '@/domain/entities/Recipe';
 import { Injectable } from '@/kernel/decorators/Injectable';
@@ -31,5 +35,17 @@ export class DynamoRecipeRepository implements RecipeRepository {
         ConditionExpression: 'attribute_not_exists(PK)',
       }),
     );
+  }
+
+  async delete(userId: string, recipeId: string): Promise<boolean> {
+    const { Attributes } = await this.client.send(
+      new DeleteCommand({
+        TableName: this.config.tableName,
+        Key: { PK: `USER#${userId}`, SK: `RECIPE#${recipeId}` },
+        ReturnValues: 'ALL_OLD',
+      }),
+    );
+
+    return Attributes !== undefined;
   }
 }
