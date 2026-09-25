@@ -77,6 +77,8 @@ functions:
   - ${file(sls/functions/updateProfile.yml)}
   - ${file(sls/functions/updateGoals.yml)}
   - ${file(sls/functions/createManualMeal.yml)}
+  - ${file(sls/functions/listMealsByDay.yml)}
+  - ${file(sls/functions/getMeal.yml)}
 
 resources:
   - ${file(sls/resources/dynamodb.yml)}

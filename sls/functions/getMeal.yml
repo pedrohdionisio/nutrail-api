@@ -1,0 +1,8 @@
+getMeal:
+  handler: src/main/functions/getMeal.handler
+  events:
+    - httpApi:
+        method: GET
+        path: /meals/{mealId}
+        authorizer:
+          name: cognito

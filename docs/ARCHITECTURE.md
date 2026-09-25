@@ -134,7 +134,7 @@ type Ingredient = {
 - **Datas:** o DynamoDB não tem tipo Date. `createdAt` em ISO 8601 (UTC). `date` e `birthDate` em `YYYY-MM-DD`.
 - **Data local:** o app envia a data local (`YYYY-MM-DD`) na criação da refeição. Nunca derivar `date` a partir do UTC, senão uma janta às 22h em UTC-3 cai no dia seguinte.
 - **Arquivos:** guardar sempre a **chave** do S3, nunca a URL. URLs são geradas na leitura.
-- **Totais do dia:** calculados somando as refeições do dia. Não existe item agregado.
+- **Totais do dia:** calculados somando as refeições do dia. Não existe item agregado. O `GET /meals?date=` devolve a lista e os totais juntos, considerando só refeições em `SUCCESS`, em ordem cronológica (GSI1SK). O `GET /meals/{mealId}` devolve a refeição em qualquer status (é o endpoint de polling).
 
 ---
 
@@ -234,6 +234,7 @@ Convenção de nomes: o port tem o nome "limpo" e a implementação leva o prefi
 | `MealRepository` | `DynamoMealRepository` | singleton |
 | `RecipeRepository` | `DynamoRecipeRepository` | singleton |
 | `ListMealsByDayQuery` | `DynamoListMealsByDayQuery` | singleton |
+| `GetMealQuery` | `DynamoGetMealQuery` | singleton |
 | `GetProfileQuery` | `DynamoGetProfileQuery` | singleton |
 | `UserIdResolver` | `DynamoUserIdResolver` | singleton (cache) |
 | `AuthProvider` | `CognitoAuthProvider` | singleton |

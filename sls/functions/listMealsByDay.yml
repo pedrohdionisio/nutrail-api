@@ -1,0 +1,8 @@
+listMealsByDay:
+  handler: src/main/functions/listMealsByDay.handler
+  events:
+    - httpApi:
+        method: GET
+        path: /meals
+        authorizer:
+          name: cognito

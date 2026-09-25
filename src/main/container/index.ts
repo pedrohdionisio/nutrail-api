@@ -6,8 +6,10 @@ import OpenAI from 'openai';
 import { AuthProvider } from '@/application/ports/AuthProvider';
 import { Clock } from '@/application/ports/Clock';
 import { EmailSender } from '@/application/ports/EmailSender';
+import { GetMealQuery } from '@/application/ports/GetMealQuery';
 import { GetProfileQuery } from '@/application/ports/GetProfileQuery';
 import { IdGenerator } from '@/application/ports/IdGenerator';
+import { ListMealsByDayQuery } from '@/application/ports/ListMealsByDayQuery';
 import { MealAnalyzer } from '@/application/ports/MealAnalyzer';
 import { MealRepository } from '@/application/ports/MealRepository';
 import { UserIdResolver } from '@/application/ports/UserIdResolver';
@@ -25,7 +27,9 @@ import { GoalCalculator } from '@/domain/services/GoalCalculator';
 import { OpenAIMealAnalyzer } from '@/infra/ai/OpenAIMealAnalyzer';
 import { CognitoAuthProvider } from '@/infra/auth/CognitoAuthProvider';
 import { DynamoUserIdResolver } from '@/infra/auth/DynamoUserIdResolver';
+import { DynamoGetMealQuery } from '@/infra/database/dynamo/DynamoGetMealQuery';
 import { DynamoGetProfileQuery } from '@/infra/database/dynamo/DynamoGetProfileQuery';
+import { DynamoListMealsByDayQuery } from '@/infra/database/dynamo/DynamoListMealsByDayQuery';
 import { DynamoMealRepository } from '@/infra/database/dynamo/DynamoMealRepository';
 import { DynamoUserRepository } from '@/infra/database/dynamo/DynamoUserRepository';
 import { SesEmailSender } from '@/infra/email/SesEmailSender';
@@ -41,6 +45,8 @@ import { UpdateGoalsController } from '@/presentation/controllers/goals/UpdateGo
 import { HealthController } from '@/presentation/controllers/HealthController';
 import { GetMeController } from '@/presentation/controllers/me/GetMeController';
 import { CreateManualMealController } from '@/presentation/controllers/meals/CreateManualMealController';
+import { GetMealController } from '@/presentation/controllers/meals/GetMealController';
+import { ListMealsByDayController } from '@/presentation/controllers/meals/ListMealsByDayController';
 import { UpdateProfileController } from '@/presentation/controllers/profile/UpdateProfileController';
 import { AppConfig } from '@/shared/config/AppConfig';
 
@@ -81,6 +87,8 @@ container
   .bind(GetProfileQuery, DynamoGetProfileQuery, { scope: 'singleton' })
   .bind(MealRepository, DynamoMealRepository, { scope: 'singleton' })
   .bind(MealAnalyzer, OpenAIMealAnalyzer, { scope: 'singleton' })
+  .bind(ListMealsByDayQuery, DynamoListMealsByDayQuery, { scope: 'singleton' })
+  .bind(GetMealQuery, DynamoGetMealQuery, { scope: 'singleton' })
   .bind(UserIdResolver, DynamoUserIdResolver, { scope: 'singleton' })
   .bind(AuthProvider, CognitoAuthProvider, { scope: 'singleton' })
   .bind(EmailSender, SesEmailSender, { scope: 'singleton' })
@@ -118,6 +126,10 @@ container
   .bind(UpdateGoalsController, UpdateGoalsController, { scope: 'transient' })
   .bind(CreateManualMealController, CreateManualMealController, {
     scope: 'transient',
-  });
+  })
+  .bind(ListMealsByDayController, ListMealsByDayController, {
+    scope: 'transient',
+  })
+  .bind(GetMealController, GetMealController, { scope: 'transient' });
 
 container.validate();
