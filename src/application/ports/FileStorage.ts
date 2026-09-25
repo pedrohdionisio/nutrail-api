@@ -16,4 +16,6 @@ export abstract class FileStorage {
   abstract getMetadata(key: string): Promise<Record<string, string>>;
 
   abstract deleteMany(keys: string[]): Promise<void>;
+
+  abstract deleteByPrefix(prefix: string): Promise<void>;
 }

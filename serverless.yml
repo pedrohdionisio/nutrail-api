@@ -34,6 +34,7 @@ provider:
             - dynamodb:UpdateItem
             - dynamodb:DeleteItem
             - dynamodb:Query
+            - dynamodb:BatchWriteItem
           Resource:
             - !GetAtt MainTable.Arn
             - !Join ['/', [!GetAtt MainTable.Arn, 'index', '*']]
@@ -43,6 +44,10 @@ provider:
             - s3:PutObject
             - s3:DeleteObject
           Resource: !Join ['/', [!GetAtt FilesBucket.Arn, '*']]
+        - Effect: Allow
+          Action:
+            - s3:ListBucket
+          Resource: !GetAtt FilesBucket.Arn
         - Effect: Allow
           Action:
             - sqs:SendMessage
@@ -78,6 +83,7 @@ functions:
   - ${file(sls/functions/confirmForgotPassword.yml)}
   - ${file(sls/functions/customMessage.yml)}
   - ${file(sls/functions/getMe.yml)}
+  - ${file(sls/functions/deleteMe.yml)}
   - ${file(sls/functions/updateProfile.yml)}
   - ${file(sls/functions/updateGoals.yml)}
   - ${file(sls/functions/createManualMeal.yml)}

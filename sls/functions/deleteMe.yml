@@ -1,0 +1,9 @@
+deleteMe:
+  handler: src/main/functions/deleteMe.handler
+  timeout: 29
+  events:
+    - httpApi:
+        method: DELETE
+        path: /me
+        authorizer:
+          name: cognito

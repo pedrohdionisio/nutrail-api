@@ -146,12 +146,18 @@ export class CognitoAuthProvider implements AuthProvider {
   }
 
   async deleteUser(externalId: string): Promise<void> {
-    await this.client.send(
-      new AdminDeleteUserCommand({
-        UserPoolId: this.config.cognito.userPoolId,
-        Username: externalId,
-      }),
-    );
+    try {
+      await this.client.send(
+        new AdminDeleteUserCommand({
+          UserPoolId: this.config.cognito.userPoolId,
+          Username: externalId,
+        }),
+      );
+    } catch (error) {
+      if (error instanceof UserNotFoundException) return;
+
+      throw error;
+    }
   }
 
   private async createUser(email: string): Promise<string> {

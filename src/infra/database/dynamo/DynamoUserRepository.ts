@@ -1,12 +1,18 @@
+import { setTimeout } from 'node:timers/promises';
 import {
+  BatchWriteCommand,
   DynamoDBDocumentClient,
   GetCommand,
   PutCommand,
+  QueryCommand,
 } from '@aws-sdk/lib-dynamodb';
 import type { UserRepository } from '@/application/ports/UserRepository';
 import { User } from '@/domain/entities/User';
 import { Injectable } from '@/kernel/decorators/Injectable';
 import { AppConfig } from '@/shared/config/AppConfig';
+
+const BATCH_SIZE = 25;
+const MAX_BATCH_ATTEMPTS = 5;
 
 @Injectable()
 export class DynamoUserRepository implements UserRepository {
@@ -52,6 +58,53 @@ export class DynamoUserRepository implements UserRepository {
 
   async update(user: User): Promise<void> {
     await this.put(user, 'attribute_exists(PK)');
+  }
+
+  async deleteWithAllData(id: string): Promise<void> {
+    let cursor: Record<string, unknown> | undefined;
+
+    do {
+      const { Items = [], LastEvaluatedKey } = await this.client.send(
+        new QueryCommand({
+          TableName: this.config.tableName,
+          KeyConditionExpression: 'PK = :pk',
+          ExpressionAttributeValues: { ':pk': `USER#${id}` },
+          ProjectionExpression: 'PK, SK',
+          ExclusiveStartKey: cursor,
+        }),
+      );
+
+      for (let start = 0; start < Items.length; start += BATCH_SIZE) {
+        await this.deleteBatch(Items.slice(start, start + BATCH_SIZE));
+      }
+
+      cursor = LastEvaluatedKey;
+    } while (cursor);
+  }
+
+  private async deleteBatch(keys: Record<string, unknown>[]): Promise<void> {
+    let requests = keys.map((key) => ({
+      DeleteRequest: { Key: { PK: key.PK, SK: key.SK } },
+    }));
+
+    for (let attempt = 1; requests.length > 0; attempt++) {
+      if (attempt > MAX_BATCH_ATTEMPTS) {
+        throw new Error(`Could not delete ${requests.length} user items.`);
+      }
+
+      const { UnprocessedItems } = await this.client.send(
+        new BatchWriteCommand({
+          RequestItems: { [this.config.tableName]: requests },
+        }),
+      );
+
+      requests = (UnprocessedItems?.[this.config.tableName] ??
+        []) as typeof requests;
+
+      if (requests.length > 0) {
+        await setTimeout(100 * 2 ** attempt);
+      }
+    }
   }
 
   private async put(user: User, condition: string): Promise<void> {

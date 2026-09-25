@@ -174,6 +174,16 @@ O sign-up acontece no fim do onboarding e recebe dados da conta e do perfil junt
 
 Se o passo 5 falhar, a Saga remove o usuário do Cognito, evitando um usuário sem perfil. Como as metas estão embutidas no PROFILE, é uma gravação só e não precisa de UnitOfWork.
 
+### 4.3 Exclusão da conta
+
+`DELETE /me` → `DeleteAccountUseCase` apaga tudo do usuário, nesta ordem:
+
+1. Arquivos no S3 por prefixo (`pictures/{userId}/` e `inputs/{userId}/`), o que pega também arquivos não referenciados por nenhuma meal.
+2. Usuário no Cognito (`AuthProvider.deleteUser`, que ignora usuário inexistente).
+3. Toda a partição `USER#{id}` no DynamoDB (perfil, meals e receitas), em `BatchWriteItem` de 25, com retry dos itens não processados.
+
+A ordem garante que uma falha possa ser repetida pelo próprio usuário: enquanto o perfil existir, o `UserIdResolver` resolve e o `DELETE /me` pode ser chamado de novo. O único estado sem retomada pela API é uma falha no passo 3 depois do passo 2; ela fica logada para limpeza manual. O access token continua válido até expirar (o authorizer só confere a assinatura). Instâncias de Lambda sem o `sub` no cache do resolver respondem 401, porque o perfil não existe mais; uma instância que já tinha o `sub` em cache ainda resolveria o `userId` até o token expirar, e uma gravação nesse intervalo criaria dados órfãos. O risco foi aceito por ser estreito (o mesmo usuário agindo logo após excluir a conta).
+
 ---
 
 ## 5. Arquitetura
@@ -426,6 +436,7 @@ O cliente reenvia a receita inteira. O risco de adulteração dos macros é acei
 | POST | `/auth/forgot-password` | pública |
 | POST | `/auth/forgot-password/confirm` | pública |
 | GET | `/me` | privada |
+| DELETE | `/me` | privada |
 | PUT | `/profile` | privada |
 | PUT | `/goals` | privada |
 | POST | `/meals` | privada |

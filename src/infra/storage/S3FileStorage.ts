@@ -2,6 +2,7 @@ import {
   DeleteObjectsCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   S3Client,
 } from '@aws-sdk/client-s3';
 import { createPresignedPost } from '@aws-sdk/s3-presigned-post';
@@ -83,5 +84,23 @@ export class S3FileStorage implements FileStorage {
         Delete: { Objects: keys.map((key) => ({ Key: key })), Quiet: true },
       }),
     );
+  }
+
+  async deleteByPrefix(prefix: string): Promise<void> {
+    let cursor: string | undefined;
+
+    do {
+      const { Contents = [], NextContinuationToken } = await this.client.send(
+        new ListObjectsV2Command({
+          Bucket: this.config.bucketName,
+          Prefix: prefix,
+          ContinuationToken: cursor,
+        }),
+      );
+
+      await this.deleteMany(Contents.flatMap(({ Key }) => (Key ? [Key] : [])));
+
+      cursor = NextContinuationToken;
+    } while (cursor);
   }
 }

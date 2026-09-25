@@ -6,4 +6,6 @@ export abstract class UserRepository {
   abstract create(user: User): Promise<void>;
 
   abstract update(user: User): Promise<void>;
+
+  abstract deleteWithAllData(id: string): Promise<void>;
 }
