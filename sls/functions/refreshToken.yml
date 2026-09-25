@@ -1,0 +1,6 @@
+refreshToken:
+  handler: src/main/functions/refreshToken.handler
+  events:
+    - httpApi:
+        method: POST
+        path: /auth/refresh-token

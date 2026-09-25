@@ -13,6 +13,15 @@ provider:
     TABLE_NAME: !Ref MainTable
     BUCKET_NAME: !Ref FilesBucket
     MEAL_QUEUE_URL: !Ref MealProcessingQueue
+    COGNITO_USER_POOL_ID: !Ref UserPool
+    COGNITO_CLIENT_ID: !Ref UserPoolClient
+  httpApi:
+    authorizers:
+      cognito:
+        identitySource: $request.header.Authorization
+        issuerUrl: !Join ['', ['https://cognito-idp.', !Ref AWS::Region, '.amazonaws.com/', !Ref UserPool]]
+        audience:
+          - !Ref UserPoolClient
   iam:
     role:
       statements:
@@ -35,6 +44,12 @@ provider:
           Action:
             - sqs:SendMessage
           Resource: !GetAtt MealProcessingQueue.Arn
+        - Effect: Allow
+          Action:
+            - cognito-idp:AdminCreateUser
+            - cognito-idp:AdminSetUserPassword
+            - cognito-idp:AdminDeleteUser
+          Resource: !GetAtt UserPool.Arn
 
 build:
   esbuild:
@@ -46,8 +61,14 @@ build:
 
 functions:
   - ${file(sls/functions/health.yml)}
+  - ${file(sls/functions/signUp.yml)}
+  - ${file(sls/functions/signIn.yml)}
+  - ${file(sls/functions/refreshToken.yml)}
+  - ${file(sls/functions/forgotPassword.yml)}
+  - ${file(sls/functions/confirmForgotPassword.yml)}
 
 resources:
   - ${file(sls/resources/dynamodb.yml)}
   - ${file(sls/resources/s3.yml)}
   - ${file(sls/resources/sqs.yml)}
+  - ${file(sls/resources/cognito.yml)}

@@ -43,12 +43,15 @@ async function resolveUserId(event: HttpEvent): Promise<string | undefined> {
     'authorizer' in event.requestContext
       ? event.requestContext.authorizer.jwt.claims.sub
       : undefined;
+
   if (typeof sub !== 'string') return undefined;
 
   const userId = await container.resolve(UserIdResolver).resolve(sub);
+
   if (!userId) {
     throw new HttpError(401, 'UNAUTHORIZED', 'Unauthorized.');
   }
+
   return userId;
 }
 
@@ -58,6 +61,7 @@ function parseBody(event: HttpEvent): unknown {
   const raw = event.isBase64Encoded
     ? Buffer.from(event.body, 'base64').toString('utf-8')
     : event.body;
+
   try {
     return JSON.parse(raw);
   } catch {
@@ -90,6 +94,7 @@ function toErrorResponse(error: unknown): APIGatewayProxyResultV2 {
   }
 
   console.error(error);
+
   return json(500, {
     error: { code: 'INTERNAL', message: 'Internal server error.' },
   });

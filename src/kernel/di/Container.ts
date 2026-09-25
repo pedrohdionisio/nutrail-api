@@ -1,7 +1,10 @@
 import 'reflect-metadata';
 
-// biome-ignore lint/suspicious/noExplicitAny: constructors of any shape can be tokens.
-export type Token<T = unknown> = abstract new (...args: any[]) => T;
+export type Token<T = unknown> = {
+  readonly prototype: T;
+  readonly name: string;
+};
+
 // biome-ignore lint/suspicious/noExplicitAny: implementations take injected args of any shape.
 type Constructor<T> = new (...args: any[]) => T;
 
@@ -34,6 +37,7 @@ export class Container {
       scope,
       deps: readDeps(impl),
     });
+
     return this;
   }
 
@@ -43,11 +47,13 @@ export class Container {
     { scope }: { scope: Scope },
   ): this {
     this.bindings.set(token, { kind: 'factory', factory, scope });
+
     return this;
   }
 
   resolve<T>(token: Token<T>): T {
     const binding = this.bindings.get(token);
+
     if (!binding) {
       throw new ContainerError(`No binding for ${describe(token)}.`);
     }
@@ -64,6 +70,7 @@ export class Container {
     if (binding.scope === 'singleton') {
       this.singletons.set(token, instance);
     }
+
     return instance as T;
   }
 
@@ -73,16 +80,20 @@ export class Container {
 
     const visit = (token: Token) => {
       if (done.has(token)) return;
+
       if (visiting.includes(token)) {
         const cycle = [...visiting.slice(visiting.indexOf(token)), token];
+
         throw new ContainerError(
           `Circular dependency: ${cycle.map(describe).join(' -> ')}.`,
         );
       }
 
       const binding = this.bindings.get(token);
+
       if (!binding) {
         const parent = visiting.at(-1);
+
         throw new ContainerError(
           `No binding for ${describe(token)}${parent ? `, required by ${describe(parent)}` : ''}.`,
         );
@@ -90,8 +101,10 @@ export class Container {
 
       if (binding.kind === 'class') {
         visiting.push(token);
+
         for (const dep of binding.deps) {
           const depBinding = this.bindings.get(dep);
+
           if (
             binding.scope === 'singleton' &&
             depBinding?.scope === 'transient'
@@ -100,14 +113,18 @@ export class Container {
               `Singleton ${describe(token)} cannot depend on transient ${describe(dep)}.`,
             );
           }
+
           visit(dep);
         }
+
         visiting.pop();
       }
+
       done.add(token);
     };
 
     for (const token of this.bindings.keys()) visit(token);
+
     return this;
   }
 }
@@ -124,6 +141,7 @@ function readDeps(impl: Constructor<unknown>): Token[] {
         `${describe(impl)} has constructor parameters but no metadata. Is it decorated with @Injectable()?`,
       );
     }
+
     return [];
   }
 
