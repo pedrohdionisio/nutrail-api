@@ -34,6 +34,7 @@ export class CreateManualMealUseCase {
       items: [],
       attempts: 1,
       date,
+      time,
       createdAt: this.clock.now().toISOString(),
     });
 

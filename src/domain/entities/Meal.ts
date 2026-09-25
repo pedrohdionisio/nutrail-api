@@ -37,6 +37,7 @@ type MealProps = {
   items: MealItem[];
   attempts: number;
   date: string;
+  time: string;
   createdAt: string;
 };
 
@@ -45,32 +46,42 @@ export class Meal {
   readonly userId: string;
   readonly inputType: MealInputType;
   readonly inputFileKey: string | null;
-  readonly inputText: string | null;
   readonly pictureKey: string | null;
-  readonly attempts: number;
   readonly date: string;
+  readonly time: string;
   readonly createdAt: string;
   private _status: MealStatus;
+  private _inputText: string | null;
   private _name: string | null;
   private _items: MealItem[];
+  private _attempts: number;
 
   constructor(props: MealProps) {
     this.id = props.id;
     this.userId = props.userId;
     this.inputType = props.inputType;
     this.inputFileKey = props.inputFileKey;
-    this.inputText = props.inputText;
     this.pictureKey = props.pictureKey;
-    this.attempts = props.attempts;
     this.date = props.date;
+    this.time = props.time;
     this.createdAt = props.createdAt;
     this._status = props.status;
+    this._inputText = props.inputText;
     this._name = props.name;
     this._items = props.items;
+    this._attempts = props.attempts;
   }
 
   get status(): MealStatus {
     return this._status;
+  }
+
+  get inputText(): string | null {
+    return this._inputText;
+  }
+
+  get attempts(): number {
+    return this._attempts;
   }
 
   get name(): string | null {
@@ -95,6 +106,31 @@ export class Meal {
     };
   }
 
+  markAsQueued(): void {
+    this.transition(['UPLOADING'], 'QUEUED');
+  }
+
+  markAsProcessing(): void {
+    this.transition(['QUEUED'], 'PROCESSING');
+    this._attempts += 1;
+  }
+
+  recordTranscription(text: string): void {
+    if (this._status !== 'PROCESSING') {
+      throw new InvalidMealTransitionError(this._status, 'PROCESSING');
+    }
+
+    this._inputText = text;
+  }
+
+  requeue(): void {
+    this.transition(['PROCESSING'], 'QUEUED');
+  }
+
+  fail(): void {
+    this.transition(['QUEUED', 'PROCESSING'], 'FAILED');
+  }
+
   complete({ name, items }: MealAnalysis): void {
     if (this._status !== 'PROCESSING') {
       throw new InvalidMealTransitionError(this._status, 'SUCCESS');
@@ -107,5 +143,13 @@ export class Meal {
     this._status = 'SUCCESS';
     this._name = name;
     this._items = items;
+  }
+
+  private transition(from: MealStatus[], to: MealStatus): void {
+    if (!from.includes(this._status)) {
+      throw new InvalidMealTransitionError(this._status, to);
+    }
+
+    this._status = to;
   }
 }

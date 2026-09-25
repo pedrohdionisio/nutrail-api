@@ -95,6 +95,7 @@ As metas ficam embutidas no item do usuário porque a home sempre precisa das du
 | `pictureKey` | string \| null | Chave S3 da foto de registro (opcional) |
 | `attempts` | number | Tentativas de processamento |
 | `date` | string | `YYYY-MM-DD` na data **local** do usuário |
+| `time` | string | `HH:mm` no horário **local** do usuário; usado pela IA para nomear a refeição |
 | `createdAt` | string | ISO 8601 |
 
 **Recipe**
@@ -310,7 +311,7 @@ container.bind(CreateMealUseCase, CreateMealUseCase, { scope: 'transient' });
   - Erros de aplicação/domínio → status definido no erro (padrão 400)
   - Qualquer outro erro → 500 (logado)
 - `lambdaHttpAdapter` resolve o `userId` via `UserIdResolver` em rotas privadas.
-- `lambdaS3Adapter` e `lambdaSQSAdapter` processam os records. No SQS, usar **partial batch response** (`reportBatchItemFailures`) para que uma falha não reprocesse o lote inteiro.
+- `lambdaS3Adapter` recebe o evento `Object Created` do S3 via EventBridge (um objeto por evento). `lambdaSQSAdapter` processa os records. No SQS, usar **partial batch response** (`reportBatchItemFailures`) para que uma falha não reprocesse o lote inteiro.
 - **Handlers** das Lambdas são uma linha: `export const handler = lambdaHttpAdapter(CreateMealController);`
 
 ### 5.6 Regras de domínio
@@ -346,7 +347,8 @@ pictures/{userId}/{mealId}.jpg   # fotos de refeição (registro e/ou input de I
 
 ### 6.3 Eventos e lifecycle
 
-- A notificação do S3 escuta **`inputs/` e `pictures/`**.
+- O bucket publica os eventos no **EventBridge**, e a regra `MealFileUploadedRule` filtra `Object Created` em **`inputs/` e `pictures/`** e chama a Lambda `mealUploaded`. A notificação nativa do S3 para a Lambda criaria um ciclo no CloudFormation (o bucket apontaria para a função, que já depende do bucket via `BUCKET_NAME`).
+- O handler lê os metadados do objeto (`HeadObject`) para achar a meal e confere que a chave é o `inputFileKey` dela.
 - O handler só segue para a fila se a meal estiver com `status = UPLOADING` e `inputType` for `PICTURE` ou `AUDIO`. Em qualquer outro caso (ex.: foto de registro de uma meal manual já em `SUCCESS`), o evento é ignorado.
 - **Lifecycle:** `inputs/` expira após alguns dias (o áudio não tem uso após a transcrição). `pictures/` é mantido.
 
@@ -366,13 +368,21 @@ pictures/{userId}/{mealId}.jpg   # fotos de refeição (registro e/ou input de I
    - Em caso de erro: volta para `QUEUED` enquanto houver tentativas, e depois `FAILED`
 5. O app faz polling em `GET /meals/{mealId}` até `SUCCESS` ou `FAILED`.
 
+**Detalhes**
+- `POST /meals` recebe `{ date, time, inputType: PICTURE | AUDIO }` e devolve `{ mealId, upload: { url, fields } }`. O presigned POST vale 10 minutos, aceita até 10 MB e fixa `image/jpeg` (foto) ou `audio/m4a` (áudio).
+- Máximo de **3 tentativas**, alinhado ao `maxReceiveCount: 3`. Erros de domínio (ex.: nenhum alimento identificado) vão direto para `FAILED`. Na última tentativa a meal vira `FAILED` e a mensagem é confirmada; a DLQ recebe só falhas inesperadas (mensagem malformada, queda da Lambda).
+- Se o `publish` falhar depois do `markAsQueued()`, um novo evento do S3 republica (o handler publica enquanto a meal estiver em `QUEUED`). O consumer só processa meals em `QUEUED`, o que descarta duplicatas.
+- A transcrição (`gpt-transcribe`) é salva em `inputText` antes da análise; numa nova tentativa, o áudio não é transcrito de novo.
+- A foto vai para a OpenAI por URL assinada (10 minutos, `detail: high`). Sem texto para detectar o idioma, os nomes saem em pt-BR.
+- Lambda `processMeal` com timeout de 150 s (menor que o `VisibilityTimeout` de 180 s) e `batchSize: 1`.
+
 Fila com **DLQ** e alarme no CloudWatch para mensagens na DLQ.
 
 ### 7.2 Refeição manual (síncrono)
 
 1. `POST /meals/manual` → `CreateManualMealUseCase`: salva `inputText`, chama `MealAnalyzer.analyzeText()` na própria requisição, `complete(result)`, salva com `SUCCESS`.
    - A meal nasce em `PROCESSING` em memória e só é gravada uma vez, já em `SUCCESS`. Se a análise falhar (502 `MEAL_ANALYSIS_FAILED`) ou não identificar nenhum alimento (422 `MEAL_WITHOUT_ITEMS`), nada é gravado e o app pode reenviar.
-   - O app envia também o horário local (`time`, `HH:mm`), usado só na análise e não persistido. O nome da meal é o tipo da refeição: o que o usuário disser explicitamente ("almocei...") ou, se ele não disser, o deduzido pelo horário (faixas definidas no prompt).
+   - O app envia também o horário local (`time`, `HH:mm`), persistido na meal. O nome da meal é o tipo da refeição: o que o usuário disser explicitamente ("almocei...") ou, se ele não disser, o deduzido pelo horário (faixas definidas no prompt).
    - Modelo `gpt-6-luna` com `reasoning.effort: low` e Structured Outputs. O client da OpenAI tem timeout de 25 s e 1 retry, e a Lambda tem timeout de 29 s (o HTTP API corta em 30 s).
 2. Se o usuário quiser foto de registro, recebe um presigned POST para `pictures/`. O evento desse upload é ignorado (a meal já está em `SUCCESS`).
 

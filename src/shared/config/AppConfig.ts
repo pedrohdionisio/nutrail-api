@@ -1,5 +1,7 @@
 export class AppConfig {
   readonly tableName = required('TABLE_NAME');
+  readonly bucketName = required('BUCKET_NAME');
+  readonly mealQueueUrl = required('MEAL_QUEUE_URL');
   readonly cognito = {
     userPoolId: required('COGNITO_USER_POOL_ID'),
     clientId: required('COGNITO_CLIENT_ID'),

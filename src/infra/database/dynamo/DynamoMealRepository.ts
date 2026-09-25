@@ -1,6 +1,10 @@
-import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import {
+  DynamoDBDocumentClient,
+  GetCommand,
+  PutCommand,
+} from '@aws-sdk/lib-dynamodb';
 import type { MealRepository } from '@/application/ports/MealRepository';
-import type { Meal } from '@/domain/entities/Meal';
+import { Meal } from '@/domain/entities/Meal';
 import { Injectable } from '@/kernel/decorators/Injectable';
 import { AppConfig } from '@/shared/config/AppConfig';
 
@@ -11,7 +15,42 @@ export class DynamoMealRepository implements MealRepository {
     private readonly config: AppConfig,
   ) {}
 
+  async findById(userId: string, mealId: string): Promise<Meal | null> {
+    const { Item } = await this.client.send(
+      new GetCommand({
+        TableName: this.config.tableName,
+        Key: { PK: `USER#${userId}`, SK: `MEAL#${mealId}` },
+      }),
+    );
+
+    if (!Item) return null;
+
+    return new Meal({
+      id: Item.id,
+      userId,
+      status: Item.status,
+      inputType: Item.inputType,
+      inputFileKey: Item.inputFileKey,
+      inputText: Item.inputText,
+      pictureKey: Item.pictureKey,
+      name: Item.name,
+      items: Item.items,
+      attempts: Item.attempts,
+      date: Item.date,
+      time: Item.time,
+      createdAt: Item.createdAt,
+    });
+  }
+
   async create(meal: Meal): Promise<void> {
+    await this.put(meal, 'attribute_not_exists(PK)');
+  }
+
+  async update(meal: Meal): Promise<void> {
+    await this.put(meal, 'attribute_exists(PK)');
+  }
+
+  private async put(meal: Meal, condition: string): Promise<void> {
     await this.client.send(
       new PutCommand({
         TableName: this.config.tableName,
@@ -31,9 +70,10 @@ export class DynamoMealRepository implements MealRepository {
           pictureKey: meal.pictureKey,
           attempts: meal.attempts,
           date: meal.date,
+          time: meal.time,
           createdAt: meal.createdAt,
         },
-        ConditionExpression: 'attribute_not_exists(PK)',
+        ConditionExpression: condition,
       }),
     );
   }

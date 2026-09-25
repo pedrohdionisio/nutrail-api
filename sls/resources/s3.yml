@@ -9,3 +9,34 @@ Resources:
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+
+  MealFileUploadedRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+        source:
+          - aws.s3
+        detail-type:
+          - Object Created
+        detail:
+          bucket:
+            name:
+              - !Ref FilesBucket
+          object:
+            key:
+              - prefix: inputs/
+              - prefix: pictures/
+      Targets:
+        - Id: mealUploaded
+          Arn: !GetAtt MealUploadedLambdaFunction.Arn
+
+  MealFileUploadedPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt MealUploadedLambdaFunction.Arn
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt MealFileUploadedRule.Arn

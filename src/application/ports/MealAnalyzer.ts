@@ -5,4 +5,9 @@ export abstract class MealAnalyzer {
     text: string;
     time: string;
   }): Promise<MealAnalysis>;
+
+  abstract analyzeImage(input: {
+    imageUrl: string;
+    time: string;
+  }): Promise<MealAnalysis>;
 }

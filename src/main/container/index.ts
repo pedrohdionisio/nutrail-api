@@ -1,17 +1,22 @@
 import { CognitoIdentityProviderClient } from '@aws-sdk/client-cognito-identity-provider';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { S3Client } from '@aws-sdk/client-s3';
 import { SESv2Client } from '@aws-sdk/client-sesv2';
+import { SQSClient } from '@aws-sdk/client-sqs';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import OpenAI from 'openai';
 import { AuthProvider } from '@/application/ports/AuthProvider';
 import { Clock } from '@/application/ports/Clock';
 import { EmailSender } from '@/application/ports/EmailSender';
+import { FileStorage } from '@/application/ports/FileStorage';
 import { GetMealQuery } from '@/application/ports/GetMealQuery';
 import { GetProfileQuery } from '@/application/ports/GetProfileQuery';
 import { IdGenerator } from '@/application/ports/IdGenerator';
 import { ListMealsByDayQuery } from '@/application/ports/ListMealsByDayQuery';
 import { MealAnalyzer } from '@/application/ports/MealAnalyzer';
+import { MealProcessingQueue } from '@/application/ports/MealProcessingQueue';
 import { MealRepository } from '@/application/ports/MealRepository';
+import { Transcriber } from '@/application/ports/Transcriber';
 import { UserIdResolver } from '@/application/ports/UserIdResolver';
 import { UserRepository } from '@/application/ports/UserRepository';
 import { Saga } from '@/application/services/Saga';
@@ -22,9 +27,13 @@ import { SignInUseCase } from '@/application/usecases/auth/SignInUseCase';
 import { SignUpUseCase } from '@/application/usecases/auth/SignUpUseCase';
 import { UpdateGoalsUseCase } from '@/application/usecases/goals/UpdateGoalsUseCase';
 import { CreateManualMealUseCase } from '@/application/usecases/meals/CreateManualMealUseCase';
+import { CreateMealUseCase } from '@/application/usecases/meals/CreateMealUseCase';
+import { MealUploadedUseCase } from '@/application/usecases/meals/MealUploadedUseCase';
+import { ProcessMealUseCase } from '@/application/usecases/meals/ProcessMealUseCase';
 import { UpdateProfileUseCase } from '@/application/usecases/profile/UpdateProfileUseCase';
 import { GoalCalculator } from '@/domain/services/GoalCalculator';
 import { OpenAIMealAnalyzer } from '@/infra/ai/OpenAIMealAnalyzer';
+import { OpenAITranscriber } from '@/infra/ai/OpenAITranscriber';
 import { CognitoAuthProvider } from '@/infra/auth/CognitoAuthProvider';
 import { DynamoUserIdResolver } from '@/infra/auth/DynamoUserIdResolver';
 import { DynamoGetMealQuery } from '@/infra/database/dynamo/DynamoGetMealQuery';
@@ -33,8 +42,10 @@ import { DynamoListMealsByDayQuery } from '@/infra/database/dynamo/DynamoListMea
 import { DynamoMealRepository } from '@/infra/database/dynamo/DynamoMealRepository';
 import { DynamoUserRepository } from '@/infra/database/dynamo/DynamoUserRepository';
 import { SesEmailSender } from '@/infra/email/SesEmailSender';
+import { SqsMealProcessingQueue } from '@/infra/queue/SqsMealProcessingQueue';
 import { SystemClock } from '@/infra/shared/SystemClock';
 import { UlidIdGenerator } from '@/infra/shared/UlidIdGenerator';
+import { S3FileStorage } from '@/infra/storage/S3FileStorage';
 import { Container } from '@/kernel/di/Container';
 import { ConfirmForgotPasswordController } from '@/presentation/controllers/auth/ConfirmForgotPasswordController';
 import { ForgotPasswordController } from '@/presentation/controllers/auth/ForgotPasswordController';
@@ -45,9 +56,12 @@ import { UpdateGoalsController } from '@/presentation/controllers/goals/UpdateGo
 import { HealthController } from '@/presentation/controllers/HealthController';
 import { GetMeController } from '@/presentation/controllers/me/GetMeController';
 import { CreateManualMealController } from '@/presentation/controllers/meals/CreateManualMealController';
+import { CreateMealController } from '@/presentation/controllers/meals/CreateMealController';
 import { GetMealController } from '@/presentation/controllers/meals/GetMealController';
 import { ListMealsByDayController } from '@/presentation/controllers/meals/ListMealsByDayController';
 import { UpdateProfileController } from '@/presentation/controllers/profile/UpdateProfileController';
+import { MealFileUploadedHandler } from '@/presentation/file-events/MealFileUploadedHandler';
+import { ProcessMealConsumer } from '@/presentation/queue-consumers/ProcessMealConsumer';
 import { AppConfig } from '@/shared/config/AppConfig';
 
 export const container = new Container();
@@ -68,6 +82,8 @@ container
     { scope: 'singleton' },
   )
   .bindFactory(SESv2Client, () => new SESv2Client({}), { scope: 'singleton' })
+  .bindFactory(S3Client, () => new S3Client({}), { scope: 'singleton' })
+  .bindFactory(SQSClient, () => new SQSClient({}), { scope: 'singleton' })
   .bindFactory(
     OpenAI,
     (c) =>
@@ -87,6 +103,9 @@ container
   .bind(GetProfileQuery, DynamoGetProfileQuery, { scope: 'singleton' })
   .bind(MealRepository, DynamoMealRepository, { scope: 'singleton' })
   .bind(MealAnalyzer, OpenAIMealAnalyzer, { scope: 'singleton' })
+  .bind(Transcriber, OpenAITranscriber, { scope: 'singleton' })
+  .bind(FileStorage, S3FileStorage, { scope: 'singleton' })
+  .bind(MealProcessingQueue, SqsMealProcessingQueue, { scope: 'singleton' })
   .bind(ListMealsByDayQuery, DynamoListMealsByDayQuery, { scope: 'singleton' })
   .bind(GetMealQuery, DynamoGetMealQuery, { scope: 'singleton' })
   .bind(UserIdResolver, DynamoUserIdResolver, { scope: 'singleton' })
@@ -106,7 +125,10 @@ container
   .bind(UpdateGoalsUseCase, UpdateGoalsUseCase, { scope: 'singleton' })
   .bind(CreateManualMealUseCase, CreateManualMealUseCase, {
     scope: 'singleton',
-  });
+  })
+  .bind(CreateMealUseCase, CreateMealUseCase, { scope: 'singleton' })
+  .bind(MealUploadedUseCase, MealUploadedUseCase, { scope: 'singleton' })
+  .bind(ProcessMealUseCase, ProcessMealUseCase, { scope: 'singleton' });
 
 container
   .bind(HealthController, HealthController, { scope: 'transient' })
@@ -130,6 +152,13 @@ container
   .bind(ListMealsByDayController, ListMealsByDayController, {
     scope: 'transient',
   })
-  .bind(GetMealController, GetMealController, { scope: 'transient' });
+  .bind(GetMealController, GetMealController, { scope: 'transient' })
+  .bind(CreateMealController, CreateMealController, { scope: 'transient' });
+
+container
+  .bind(MealFileUploadedHandler, MealFileUploadedHandler, {
+    scope: 'transient',
+  })
+  .bind(ProcessMealConsumer, ProcessMealConsumer, { scope: 'transient' });
 
 container.validate();

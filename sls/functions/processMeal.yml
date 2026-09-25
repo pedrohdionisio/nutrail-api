@@ -1,0 +1,8 @@
+processMeal:
+  handler: src/main/functions/processMeal.handler
+  timeout: 150
+  events:
+    - sqs:
+        arn: !GetAtt MealProcessingQueue.Arn
+        batchSize: 1
+        functionResponseType: ReportBatchItemFailures

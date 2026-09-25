@@ -1,0 +1,2 @@
+mealUploaded:
+  handler: src/main/functions/mealUploaded.handler
