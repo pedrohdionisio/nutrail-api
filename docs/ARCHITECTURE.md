@@ -378,6 +378,7 @@ pictures/{userId}/{mealId}.jpg   # fotos de refeição (registro e/ou input de I
 - Se o `publish` falhar depois do `markAsQueued()`, um novo evento do S3 republica (o handler publica enquanto a meal estiver em `QUEUED`). O consumer só processa meals em `QUEUED`, o que descarta duplicatas.
 - A transcrição (`gpt-transcribe`) é salva em `inputText` antes da análise; numa nova tentativa, o áudio não é transcrito de novo.
 - A foto vai para a OpenAI por URL assinada (10 minutos, `detail: high`). Sem texto para detectar o idioma, os nomes saem em pt-BR.
+- **Reprocessamento:** `POST /meals/{mealId}/reprocess` aceita só meals por foto ou áudio em `FAILED` (`retry()`): volta para `QUEUED`, zera `attempts` (as 3 tentativas valem de novo), publica na fila e responde 202. A transcrição já salva em `inputText` é reaproveitada, então funciona mesmo depois que o áudio expirou em `inputs/`.
 - Lambda `processMeal` com timeout de 150 s (menor que o `VisibilityTimeout` de 180 s) e `batchSize: 1`.
 
 Fila com **DLQ** e alarme no CloudWatch para mensagens na DLQ.
@@ -433,6 +434,7 @@ O cliente reenvia a receita inteira. O risco de adulteração dos macros é acei
 | PUT | `/meals/{mealId}` | privada |
 | DELETE | `/meals/{mealId}` | privada |
 | POST | `/meals/{mealId}/picture` | privada |
+| POST | `/meals/{mealId}/reprocess` | privada |
 | POST | `/recipes/suggestions` | privada |
 | POST | `/recipes` | privada |
 | GET | `/recipes` | privada |

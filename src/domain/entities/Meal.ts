@@ -144,6 +144,15 @@ export class Meal {
     this.transition(['PROCESSING'], 'QUEUED');
   }
 
+  retry(): void {
+    if (this.inputType === 'MANUAL') {
+      throw new InvalidMealTransitionError(this._status, 'QUEUED');
+    }
+
+    this.transition(['FAILED'], 'QUEUED');
+    this._attempts = 0;
+  }
+
   fail(): void {
     this.transition(['QUEUED', 'PROCESSING'], 'FAILED');
   }

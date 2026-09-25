@@ -1,0 +1,8 @@
+reprocessMeal:
+  handler: src/main/functions/reprocessMeal.handler
+  events:
+    - httpApi:
+        method: POST
+        path: /meals/{mealId}/reprocess
+        authorizer:
+          name: cognito
