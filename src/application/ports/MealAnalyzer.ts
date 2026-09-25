@@ -1,4 +1,4 @@
-import type { MealAnalysis } from '@/domain/entities/Meal';
+import type { MealAnalysis, MealItem } from '@/domain/entities/Meal';
 
 export abstract class MealAnalyzer {
   abstract analyzeText(input: {
@@ -10,4 +10,6 @@ export abstract class MealAnalyzer {
     imageUrl: string;
     time: string;
   }): Promise<MealAnalysis>;
+
+  abstract analyzeItems(text: string): Promise<MealItem[]>;
 }

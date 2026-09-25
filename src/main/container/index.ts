@@ -30,6 +30,7 @@ import { RefreshTokenUseCase } from '@/application/usecases/auth/RefreshTokenUse
 import { SignInUseCase } from '@/application/usecases/auth/SignInUseCase';
 import { SignUpUseCase } from '@/application/usecases/auth/SignUpUseCase';
 import { UpdateGoalsUseCase } from '@/application/usecases/goals/UpdateGoalsUseCase';
+import { AnalyzeMealItemsUseCase } from '@/application/usecases/meals/AnalyzeMealItemsUseCase';
 import { CreateManualMealUseCase } from '@/application/usecases/meals/CreateManualMealUseCase';
 import { CreateMealPictureUploadUseCase } from '@/application/usecases/meals/CreateMealPictureUploadUseCase';
 import { CreateMealUseCase } from '@/application/usecases/meals/CreateMealUseCase';
@@ -70,6 +71,7 @@ import { UpdateGoalsController } from '@/presentation/controllers/goals/UpdateGo
 import { HealthController } from '@/presentation/controllers/HealthController';
 import { DeleteMeController } from '@/presentation/controllers/me/DeleteMeController';
 import { GetMeController } from '@/presentation/controllers/me/GetMeController';
+import { AnalyzeMealItemsController } from '@/presentation/controllers/meals/AnalyzeMealItemsController';
 import { CreateManualMealController } from '@/presentation/controllers/meals/CreateManualMealController';
 import { CreateMealController } from '@/presentation/controllers/meals/CreateMealController';
 import { CreateMealPictureUploadController } from '@/presentation/controllers/meals/CreateMealPictureUploadController';
@@ -162,6 +164,9 @@ container
   .bind(UpdateMealUseCase, UpdateMealUseCase, { scope: 'singleton' })
   .bind(DeleteMealUseCase, DeleteMealUseCase, { scope: 'singleton' })
   .bind(ReprocessMealUseCase, ReprocessMealUseCase, { scope: 'singleton' })
+  .bind(AnalyzeMealItemsUseCase, AnalyzeMealItemsUseCase, {
+    scope: 'singleton',
+  })
   .bind(SuggestRecipeUseCase, SuggestRecipeUseCase, { scope: 'singleton' })
   .bind(SaveRecipeUseCase, SaveRecipeUseCase, { scope: 'singleton' })
   .bind(DeleteRecipeUseCase, DeleteRecipeUseCase, { scope: 'singleton' });
@@ -197,6 +202,9 @@ container
   .bind(UpdateMealController, UpdateMealController, { scope: 'transient' })
   .bind(DeleteMealController, DeleteMealController, { scope: 'transient' })
   .bind(ReprocessMealController, ReprocessMealController, {
+    scope: 'transient',
+  })
+  .bind(AnalyzeMealItemsController, AnalyzeMealItemsController, {
     scope: 'transient',
   })
   .bind(SuggestRecipeController, SuggestRecipeController, {

@@ -94,6 +94,7 @@ functions:
   - ${file(sls/functions/updateMeal.yml)}
   - ${file(sls/functions/deleteMeal.yml)}
   - ${file(sls/functions/reprocessMeal.yml)}
+  - ${file(sls/functions/analyzeMealItems.yml)}
   - ${file(sls/functions/mealUploaded.yml)}
   - ${file(sls/functions/processMeal.yml)}
   - ${file(sls/functions/suggestRecipe.yml)}

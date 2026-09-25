@@ -4,9 +4,10 @@ import type { ResponseInput } from 'openai/resources/responses/responses';
 import { z } from 'zod';
 import { MealAnalysisFailedError } from '@/application/errors/MealAnalysisFailedError';
 import type { MealAnalyzer } from '@/application/ports/MealAnalyzer';
-import type { MealAnalysis } from '@/domain/entities/Meal';
+import type { MealAnalysis, MealItem } from '@/domain/entities/Meal';
 import { Injectable } from '@/kernel/decorators/Injectable';
 import { analyzeMealImagePrompt } from './prompts/analyzeMealImagePrompt';
+import { analyzeMealItemsPrompt } from './prompts/analyzeMealItemsPrompt';
 import { analyzeMealTextPrompt } from './prompts/analyzeMealTextPrompt';
 
 const MODEL = 'gpt-6-luna';
@@ -63,6 +64,15 @@ export class OpenAIMealAnalyzer implements MealAnalyzer {
         ],
       },
     ]);
+  }
+
+  async analyzeItems(text: string): Promise<MealItem[]> {
+    const { items } = await this.analyze([
+      { role: 'system', content: analyzeMealItemsPrompt },
+      { role: 'user', content: text },
+    ]);
+
+    return items;
   }
 
   private async analyze(input: ResponseInput): Promise<MealAnalysis> {

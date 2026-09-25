@@ -1,0 +1,9 @@
+analyzeMealItems:
+  handler: src/main/functions/analyzeMealItems.handler
+  timeout: 29
+  events:
+    - httpApi:
+        method: POST
+        path: /meals/items/analysis
+        authorizer:
+          name: cognito
