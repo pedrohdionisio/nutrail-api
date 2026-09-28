@@ -9,3 +9,4 @@ node_modules/
 scripts/*.jpg
 scripts/*.jpeg
 scripts/*.m4a
+coverage

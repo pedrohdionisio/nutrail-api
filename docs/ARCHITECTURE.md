@@ -518,7 +518,6 @@ Uma refeição salva é um modelo reutilizável: o usuário salva uma refeição
 
 ## 9. Pendências e decisões futuras
 
-- **Testes unitários** dos use cases com fakes em memória dos ports (a arquitetura já está preparada para isso).
 - **Servir arquivos via CloudFront**, se as URLs assinadas do S3 ficarem caras ou lentas. O formato da resposta (`pictureUrl`) não muda.
 - **Mover a refeição manual e a sugestão de receita para a fila**, se a latência síncrona ficar ruim.
 

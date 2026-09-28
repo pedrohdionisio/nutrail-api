@@ -6,14 +6,13 @@ A fonte de verdade da arquitetura é [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md
 
 - Gerenciador de pacotes: **pnpm**. Nunca usar npm ou yarn.
 - Lint e formatação: **Biome** (`pnpm lint`, `pnpm lint:fix`). Não adicionar ESLint nem Prettier.
-- Tipos: `pnpm typecheck`. Rodar `pnpm lint` e `pnpm typecheck` antes de considerar uma tarefa concluída.
+- Tipos: `pnpm typecheck`. Testes: `pnpm test` (Vitest). Rodar `pnpm lint`, `pnpm typecheck` e `pnpm test` antes de considerar uma tarefa concluída.
 - Deploy: Serverless Framework v4, região `us-east-1`, runtime `nodejs24.x`. Empacotamento por função (`package.individually: true`): cada bundle carrega o container inteiro, e um zip único estoura o limite de 250 MB da Lambda.
 - Novas funções ficam em `sls/functions/*.yml` e novos recursos em `sls/resources/*.yml`, ambos referenciados no `serverless.yml`.
 
 ## Código
 
 - **Sem comentários de código.** Explicações vão na conversa, não no arquivo. Só são permitidos comentários funcionais (`biome-ignore`, `@type` em JS e similares).
-- **Sem testes** até serem pedidos explicitamente.
 - Imports internos usam o alias `@/` (ex.: `@/application/ports/UserIdResolver`). Imports relativos só dentro da mesma pasta ou para a pasta vizinha imediata.
 - Aspas simples, indentação de 2 espaços, LF. O Biome e o `.editorconfig` já garantem isso.
 - Uma linha em branco entre contextos: entre `if`s consecutivos, entre um bloco de `const`s relacionados e o próximo, entre um `const` e o `if` que o testa, e antes de todo `return` ou `throw` que não seja a primeira linha do bloco.
@@ -51,3 +50,16 @@ A fonte de verdade da arquitetura é [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md
 - DynamoDB single-table, seguindo as chaves e os access patterns da seção 3 do documento de arquitetura.
 - `createdAt` em ISO 8601 UTC. `date` e `birthDate` em `YYYY-MM-DD`. A `date` da refeição vem do app e nunca é derivada do UTC.
 - No S3, guardar sempre a chave, nunca a URL.
+
+## Testes
+
+Vitest, com o `unplugin-swc` no `vitest.config.ts` para emitir os metadados dos decorators (sem eles o container não resolve nada). `aws-sdk-client-mock` simula os clients da AWS.
+
+- Teste **nunca** fica em `src/`. `tests/` espelha `src/`: `src/domain/entities/Meal.ts` → `tests/domain/entities/Meal.test.ts`.
+- `tests/support/` guarda a infraestrutura e não espelha nada: `setup.ts` (env de teste), `fixtures/` (`build<Entidade>(overrides)`), `fakes/` (um fake em memória por port, montados juntos por `createFakes()`), `app.ts` (harness dos testes de feature) e `dynamo.ts`.
+- **Domínio e serviços:** teste unitário direto.
+- **Use case:** instanciado à mão com os fakes de `createFakes()`, sem container. Afirme o estado final (o que ficou no `InMemoryDatabase`, o que foi publicado ou enviado), não as chamadas.
+- **Feature:** um arquivo por função em `tests/main/functions/`, chamando o `handler` real com `invoke()`. O `app.ts` troca cada port do container por um fake recriado a cada teste; `givenSignedInUser()` cria o usuário e o `as` da requisição faz o papel do authorizer. Cubra o caminho feliz, os erros de negócio (status e `code`) e a validação.
+- **Infra:** adapter testado com o SDK simulado (`mockClient`) ou com o client da OpenAI espionado (`vi.spyOn`), afirmando o comando enviado (chaves, índice, condição) e o mapeamento da resposta e dos erros.
+- Fake novo entra em `createFakes()` e no `app.ts`; port novo sem fake quebra os testes de feature que o resolvem.
+
