@@ -1,4 +1,5 @@
 import type { ActivityLevel, Goal, UserProfile } from '../entities/User';
+import { GoalsBelowMacrosError } from '../errors/GoalsBelowMacrosError';
 import type { Macros } from '../value-objects/Macros';
 
 const ACTIVITY_FACTORS: Record<ActivityLevel, number> = {
@@ -17,6 +18,10 @@ const GOAL_ADJUSTMENTS: Record<Goal, number> = {
 
 const PROTEIN_PER_KG = 2;
 const FAT_PER_KG = 0.9;
+
+const KCAL_PER_GRAM = { protein: 4, carbohydrate: 4, fat: 9 };
+
+type FixedMacros = Pick<Macros, 'protein' | 'fat'>;
 
 export class GoalCalculator {
   calculate(profile: UserProfile, now: Date): Macros {
@@ -38,11 +43,37 @@ export class GoalCalculator {
 
     const carbohydrate = Math.max(
       0,
-      Math.round((calories - protein * 4 - fat * 9) / 4),
+      carbohydrateFor(calories, { protein, fat }),
     );
 
     return { calories, protein, carbohydrate, fat };
   }
+
+  fromCalories(calories: number, { protein, fat }: FixedMacros): Macros {
+    const carbohydrate = carbohydrateFor(calories, { protein, fat });
+
+    if (carbohydrate < 0) {
+      throw new GoalsBelowMacrosError();
+    }
+
+    return { calories, protein, carbohydrate, fat };
+  }
+
+  fromMacros({ protein, carbohydrate, fat }: Omit<Macros, 'calories'>): Macros {
+    const calories =
+      protein * KCAL_PER_GRAM.protein +
+      carbohydrate * KCAL_PER_GRAM.carbohydrate +
+      fat * KCAL_PER_GRAM.fat;
+
+    return { calories, protein, carbohydrate, fat };
+  }
+}
+
+function carbohydrateFor(calories: number, { protein, fat }: FixedMacros) {
+  return Math.round(
+    (calories - protein * KCAL_PER_GRAM.protein - fat * KCAL_PER_GRAM.fat) /
+      KCAL_PER_GRAM.carbohydrate,
+  );
 }
 
 function ageAt(birthDate: string, now: Date): number {

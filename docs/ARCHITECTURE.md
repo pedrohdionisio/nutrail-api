@@ -343,7 +343,7 @@ container.bind(CreateMealUseCase, CreateMealUseCase, { scope: 'transient' });
   - Taxa metabólica basal pela **Mifflin-St Jeor**, a equação mais validada para a população geral entre as que não exigem composição corporal. Idade exata, considerando mês e dia.
   - Gasto total = TMB × fator de atividade (1,2 a 1,9), mais ou menos 500 kcal conforme o objetivo.
   - Proteína de 2 g/kg e gordura de 0,9 g/kg; o carboidrato completa as calorias.
-- **Metas e perfil:** `PUT /profile` recalcula as metas e sobrescreve qualquer ajuste manual. `PUT /goals` edita as metas sem mexer no perfil.
+- **Metas e perfil:** `PUT /profile` recalcula as metas e sobrescreve qualquer ajuste manual. `PUT /goals` edita as metas sem mexer no perfil e mantém calorias e macros coerentes (4 kcal/g de proteína e carboidrato, 9 kcal/g de gordura). O body é `{ calories }` ou `{ protein, carbohydrate, fat }`: com calorias, proteína e gordura ficam e o carboidrato completa (erro 422 se não couber); com macros, as calorias são a soma. Devolve `{ goals }`.
 
 ---
 

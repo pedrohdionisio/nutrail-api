@@ -19,8 +19,8 @@ export class UpdateGoalsController extends Controller<'private', GoalsBody> {
     userId,
     body,
   }: ControllerRequest<'private', GoalsBody>): Promise<ControllerResponse> {
-    await this.updateGoals.execute({ userId, goals: body });
+    const result = await this.updateGoals.execute({ userId, goals: body });
 
-    return { statusCode: 204 };
+    return { statusCode: 200, body: result };
   }
 }
