@@ -15,6 +15,7 @@ Resources:
   MealProcessingDLQAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
+      AlarmName: ${self:service}-${sls:stage}-meal-processing-dlq
       AlarmDescription: Meals failed processing and landed in the DLQ.
       Namespace: AWS/SQS
       MetricName: ApproximateNumberOfMessagesVisible
@@ -27,3 +28,7 @@ Resources:
       Threshold: 1
       ComparisonOperator: GreaterThanOrEqualToThreshold
       TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref AlertsTopic
+      OKActions:
+        - !Ref AlertsTopic

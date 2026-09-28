@@ -358,6 +358,16 @@ container.bind(CreateMealUseCase, CreateMealUseCase, { scope: 'transient' });
   - Proteína de 2 g/kg e gordura de 0,9 g/kg; o carboidrato completa as calorias.
 - **Metas e perfil:** `PUT /profile` recalcula as metas e sobrescreve qualquer ajuste manual. `PUT /goals` edita as metas sem mexer no perfil e mantém calorias e macros coerentes (4 kcal/g de proteína e carboidrato, 9 kcal/g de gordura). O body é `{ calories }` ou `{ protein, carbohydrate, fat }`: com calorias, proteína e gordura ficam e o carboidrato completa (erro 422 se não couber); com macros, as calorias são a soma. Devolve `{ goals }`.
 
+### 5.7 Observabilidade
+
+CloudWatch, dentro do free tier (10 alarmes padrão e 5 GB de logs por mês). Cada stage tem 5 alarmes, então `dev` e `prod` juntos cabem no gratuito.
+
+- Os alarmes notificam o tópico SNS `${service}-${stage}-alerts` ao disparar e ao voltar ao normal. O e-mail vem de `ALERT_EMAIL` no deploy, e a inscrição precisa ser confirmada pelo link que a AWS envia.
+- **5xx do HTTP API** (3 ou mais em 5 minutos): cobre de uma vez todas as rotas HTTP, incluindo erro não tratado, timeout de Lambda e falha da OpenAI (502). Por isso não existe alarme de erro por função HTTP: o adapter converte exceção em resposta, e a Lambda não registra `Errors`.
+- **Erros das Lambdas assíncronas** (1 ou mais em 5 minutos): `mealUploaded` (o arquivo chegou e a meal não entrou na fila), `processMeal` (crash ou timeout; falha de análise vira nova tentativa e DLQ, não erro) e `customMessage` (o e-mail de recuperação de senha não sai).
+- **Mensagem na DLQ:** uma meal esgotou as tentativas de processamento.
+- Logs das Lambdas com retenção de 30 dias (`provider.logRetentionInDays`).
+
 ---
 
 ## 6. Armazenamento de arquivos (S3)

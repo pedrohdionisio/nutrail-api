@@ -9,6 +9,7 @@ provider:
   stage: ${opt:stage, 'dev'}
   memorySize: 512
   timeout: 10
+  logRetentionInDays: 30
   environment:
     TABLE_NAME: !Ref MainTable
     BUCKET_NAME: !Ref FilesBucket
@@ -113,3 +114,4 @@ resources:
   - ${file(sls/resources/s3.yml)}
   - ${file(sls/resources/sqs.yml)}
   - ${file(sls/resources/cognito.yml)}
+  - ${file(sls/resources/monitoring.yml)}
