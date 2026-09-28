@@ -1,0 +1,8 @@
+saveMeal:
+  handler: src/main/functions/saveMeal.handler
+  events:
+    - httpApi:
+        method: POST
+        path: /saved-meals
+        authorizer:
+          name: cognito

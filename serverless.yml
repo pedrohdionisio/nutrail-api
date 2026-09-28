@@ -102,6 +102,11 @@ functions:
   - ${file(sls/functions/saveRecipe.yml)}
   - ${file(sls/functions/listRecipes.yml)}
   - ${file(sls/functions/deleteRecipe.yml)}
+  - ${file(sls/functions/createMealFromRecipe.yml)}
+  - ${file(sls/functions/saveMeal.yml)}
+  - ${file(sls/functions/listSavedMeals.yml)}
+  - ${file(sls/functions/deleteSavedMeal.yml)}
+  - ${file(sls/functions/createMealFromSavedMeal.yml)}
 
 resources:
   - ${file(sls/resources/dynamodb.yml)}

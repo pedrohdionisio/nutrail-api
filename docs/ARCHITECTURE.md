@@ -43,6 +43,7 @@ App de controle de calorias e macros (calorias, proteínas, carboidratos e gordu
 | User (perfil + metas) | `USER#{id}` | `PROFILE` | `COGNITO#{sub}` | `PROFILE` |
 | Meal | `USER#{id}` | `MEAL#{id}` | `MEAL#{userId}#{date}` | `MEAL#{createdAt}` |
 | Recipe | `USER#{id}` | `RECIPE#{id}` | – | – |
+| SavedMeal | `USER#{id}` | `SAVED_MEAL#{id}` | – | – |
 
 GSI2 e GSI3 estão livres para necessidades futuras.
 
@@ -55,6 +56,8 @@ GSI2 e GSI3 estão livres para necessidades futuras.
 | Buscar refeição por id | Main table | `GetItem` PK=`USER#{id}`, SK=`MEAL#{mealId}` |
 | Listar refeições do usuário num dia | GSI1 | `Query` GSI1PK=`MEAL#{userId}#{date}` |
 | Listar receitas do usuário | Main table | `Query` PK=`USER#{id}`, `begins_with(SK, 'RECIPE#')` |
+| Buscar refeição salva por id | Main table | `GetItem` PK=`USER#{id}`, SK=`SAVED_MEAL#{savedMealId}` |
+| Listar refeições salvas do usuário | Main table | `Query` PK=`USER#{id}`, `begins_with(SK, 'SAVED_MEAL#')` |
 
 ### 3.3 Atributos
 
@@ -89,7 +92,7 @@ As metas ficam embutidas no item do usuário porque a home sempre precisa das du
 | `items` | `Item[]` | |
 | `calories`, `protein`, `carbohydrate`, `fat` | number | Totais, **sempre derivados dos itens** |
 | `status` | enum | `UPLOADING` \| `QUEUED` \| `PROCESSING` \| `SUCCESS` \| `FAILED` |
-| `inputType` | enum | `PICTURE` \| `AUDIO` \| `MANUAL` |
+| `inputType` | enum | `PICTURE` \| `AUDIO` \| `MANUAL` (refeições cadastradas de uma refeição salva ou de uma receita também são `MANUAL`) |
 | `inputFileKey` | string \| null | Chave S3 do arquivo que a IA processa |
 | `inputText` | string \| null | Texto manual ou transcrição do áudio |
 | `pictureKey` | string \| null | Chave S3 da foto de registro (opcional) |
@@ -107,6 +110,16 @@ As metas ficam embutidas no item do usuário porque a home sempre precisa das du
 | `ingredients` | `Ingredient[]` | |
 | `instructions` | string | |
 | `calories`, `protein`, `carbohydrate`, `fat` | number | |
+| `createdAt` | string | ISO 8601 |
+
+**SavedMeal**
+
+| Atributo | Tipo | Observação |
+|---|---|---|
+| `id` | string | ULID |
+| `name` | string | Dado pelo usuário ao salvar (ex.: "Café de sempre") |
+| `items` | `Item[]` | Copiados da refeição de origem |
+| `calories`, `protein`, `carbohydrate`, `fat` | number | Totais, derivados dos itens |
 | `createdAt` | string | ISO 8601 |
 
 **Tipos auxiliares**
@@ -434,7 +447,19 @@ O cliente reenvia a receita inteira. O risco de adulteração dos macros é acei
 
 **Migração futura para a fila:** mesma estratégia das refeições manuais, se a geração ficar lenta.
 
-### 7.4 Endpoints (proposta inicial, ajustar durante o desenvolvimento)
+### 7.4 Refeições salvas e receita → refeição (síncrono, sem IA)
+
+Uma refeição salva é um modelo reutilizável: o usuário salva uma refeição já analisada com um nome e, depois, cadastra refeições a partir dela sem abrir a original e sem chamar a IA.
+
+- `POST /saved-meals` com `{ mealId, name }` → `SaveMealUseCase`: `meal.saveAs()` copia os `items` para um item `SAVED_MEAL#{id}`. Só meals em `SUCCESS` podem ser salvas (409 `MEAL_NOT_SAVABLE`); meal inexistente → 404 `MEAL_NOT_FOUND`. O nome tem até 60 caracteres. O modelo é independente da original: editar ou excluir a meal não muda o que foi salvo.
+- `GET /saved-meals` devolve `{ savedMeals }`, da mais nova para a mais antiga, cada uma com `id`, `name`, `items`, totais e `createdAt`.
+- `DELETE /saved-meals/{savedMealId}` apaga o modelo (404 `SAVED_MEAL_NOT_FOUND` se não existir, pelo `ALL_OLD`). As meals já cadastradas a partir dele continuam.
+- `POST /saved-meals/{savedMealId}/meal` com `{ date, time }` → `CreateMealFromSavedMealUseCase`: `savedMeal.toMeal()` cria uma meal `MANUAL` em `SUCCESS`, com o nome e os itens do modelo, sem `inputFileKey`, `inputText` nem `pictureKey` (a meal aceita foto de registro própria).
+- `POST /recipes/{recipeId}/meal` com `{ date, time }` → `CreateMealFromRecipeUseCase`: cria uma meal `MANUAL` em `SUCCESS` com o nome da receita e **um item** `1 porção`, com os macros da receita. Os ingredientes não têm macros individuais, então dividi-los inventaria números. Com um item só, os totais continuam derivados dos itens, e comer meia receita é editar a quantidade para `0,5`. Receita inexistente → 404 `RECIPE_NOT_FOUND`.
+- As rotas que criam meal respondem 201 com a meal criada (`id`, `name`, `status`, `inputType`, `date`, `time`, `items`, totais, `createdAt`).
+- A exclusão da conta já cobre as refeições salvas, porque apaga todos os itens de `USER#{id}`.
+
+### 7.5 Endpoints (proposta inicial, ajustar durante o desenvolvimento)
 
 | Método | Rota | Auth |
 |---|---|---|
@@ -461,6 +486,11 @@ O cliente reenvia a receita inteira. O risco de adulteração dos macros é acei
 | POST | `/recipes` | privada |
 | GET | `/recipes` | privada |
 | DELETE | `/recipes/{recipeId}` | privada |
+| POST | `/recipes/{recipeId}/meal` | privada |
+| POST | `/saved-meals` | privada |
+| GET | `/saved-meals` | privada |
+| DELETE | `/saved-meals/{savedMealId}` | privada |
+| POST | `/saved-meals/{savedMealId}/meal` | privada |
 
 ---
 
@@ -496,10 +526,8 @@ O cliente reenvia a receita inteira. O risco de adulteração dos macros é acei
 
 Critério: só entra o que reduz o atrito de registrar ou mostra progresso, que é o que mantém o usuário no app depois das primeiras semanas.
 
-1. **Repetir refeição.** `POST /meals/{mealId}/copy` com `{ date, time }` copia os itens de uma refeição anterior, sem IA; opcionalmente, favoritos para achar rápido. Maior redução de atrito pelo menor custo.
-2. **Receita salva → refeição.** `POST /recipes/{recipeId}/meal` com `{ date, time }` cria a meal em `SUCCESS` com os ingredientes e os macros da receita. Liga as duas partes do produto.
-3. **Histórico de peso.** `POST /weights` e `GET /weights?from=&to=`, item `USER#{id}` / `WEIGHT#{date}`. O registro mais recente atualiza o peso do perfil e recalcula as metas (a regra do `PUT /profile` já existe).
-4. **Resumo por período.** `GET /summary?from=&to=` com totais por dia, médias e dias dentro da meta. O GSI1 é por dia (um mês = 30 queries); se pesar, gravar um resumo diário.
+1. **Histórico de peso.** `POST /weights` e `GET /weights?from=&to=`, item `USER#{id}` / `WEIGHT#{date}`. O registro mais recente atualiza o peso do perfil e recalcula as metas (a regra do `PUT /profile` já existe).
+2. **Resumo por período.** `GET /summary?from=&to=` com totais por dia, médias e dias dentro da meta. O GSI1 é por dia (um mês = 30 queries); se pesar, gravar um resumo diário.
 
 **Depois:** lembretes para registrar (dependem de push no app) e leitura de código de barras (base externa com cobertura irregular no Brasil; a foto já cobre boa parte).
 

@@ -1,0 +1,8 @@
+createMealFromRecipe:
+  handler: src/main/functions/createMealFromRecipe.handler
+  events:
+    - httpApi:
+        method: POST
+        path: /recipes/{recipeId}/meal
+        authorizer:
+          name: cognito

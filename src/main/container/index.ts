@@ -14,11 +14,13 @@ import { GetProfileQuery } from '@/application/ports/GetProfileQuery';
 import { IdGenerator } from '@/application/ports/IdGenerator';
 import { ListMealsByDayQuery } from '@/application/ports/ListMealsByDayQuery';
 import { ListRecipesQuery } from '@/application/ports/ListRecipesQuery';
+import { ListSavedMealsQuery } from '@/application/ports/ListSavedMealsQuery';
 import { MealAnalyzer } from '@/application/ports/MealAnalyzer';
 import { MealProcessingQueue } from '@/application/ports/MealProcessingQueue';
 import { MealRepository } from '@/application/ports/MealRepository';
 import { RecipeGenerator } from '@/application/ports/RecipeGenerator';
 import { RecipeRepository } from '@/application/ports/RecipeRepository';
+import { SavedMealRepository } from '@/application/ports/SavedMealRepository';
 import { Transcriber } from '@/application/ports/Transcriber';
 import { UserIdResolver } from '@/application/ports/UserIdResolver';
 import { UserRepository } from '@/application/ports/UserRepository';
@@ -33,6 +35,8 @@ import { SignUpUseCase } from '@/application/usecases/auth/SignUpUseCase';
 import { UpdateGoalsUseCase } from '@/application/usecases/goals/UpdateGoalsUseCase';
 import { AnalyzeMealItemsUseCase } from '@/application/usecases/meals/AnalyzeMealItemsUseCase';
 import { CreateManualMealUseCase } from '@/application/usecases/meals/CreateManualMealUseCase';
+import { CreateMealFromRecipeUseCase } from '@/application/usecases/meals/CreateMealFromRecipeUseCase';
+import { CreateMealFromSavedMealUseCase } from '@/application/usecases/meals/CreateMealFromSavedMealUseCase';
 import { CreateMealPictureUploadUseCase } from '@/application/usecases/meals/CreateMealPictureUploadUseCase';
 import { CreateMealUseCase } from '@/application/usecases/meals/CreateMealUseCase';
 import { DeleteMealUseCase } from '@/application/usecases/meals/DeleteMealUseCase';
@@ -44,6 +48,8 @@ import { UpdateProfileUseCase } from '@/application/usecases/profile/UpdateProfi
 import { DeleteRecipeUseCase } from '@/application/usecases/recipes/DeleteRecipeUseCase';
 import { SaveRecipeUseCase } from '@/application/usecases/recipes/SaveRecipeUseCase';
 import { SuggestRecipeUseCase } from '@/application/usecases/recipes/SuggestRecipeUseCase';
+import { DeleteSavedMealUseCase } from '@/application/usecases/savedMeals/DeleteSavedMealUseCase';
+import { SaveMealUseCase } from '@/application/usecases/savedMeals/SaveMealUseCase';
 import { GoalCalculator } from '@/domain/services/GoalCalculator';
 import { OpenAIMealAnalyzer } from '@/infra/ai/OpenAIMealAnalyzer';
 import { OpenAIRecipeGenerator } from '@/infra/ai/OpenAIRecipeGenerator';
@@ -54,8 +60,10 @@ import { DynamoGetMealQuery } from '@/infra/database/dynamo/DynamoGetMealQuery';
 import { DynamoGetProfileQuery } from '@/infra/database/dynamo/DynamoGetProfileQuery';
 import { DynamoListMealsByDayQuery } from '@/infra/database/dynamo/DynamoListMealsByDayQuery';
 import { DynamoListRecipesQuery } from '@/infra/database/dynamo/DynamoListRecipesQuery';
+import { DynamoListSavedMealsQuery } from '@/infra/database/dynamo/DynamoListSavedMealsQuery';
 import { DynamoMealRepository } from '@/infra/database/dynamo/DynamoMealRepository';
 import { DynamoRecipeRepository } from '@/infra/database/dynamo/DynamoRecipeRepository';
+import { DynamoSavedMealRepository } from '@/infra/database/dynamo/DynamoSavedMealRepository';
 import { DynamoUserRepository } from '@/infra/database/dynamo/DynamoUserRepository';
 import { SesEmailSender } from '@/infra/email/SesEmailSender';
 import { SqsMealProcessingQueue } from '@/infra/queue/SqsMealProcessingQueue';
@@ -83,10 +91,15 @@ import { ListMealsByDayController } from '@/presentation/controllers/meals/ListM
 import { ReprocessMealController } from '@/presentation/controllers/meals/ReprocessMealController';
 import { UpdateMealController } from '@/presentation/controllers/meals/UpdateMealController';
 import { UpdateProfileController } from '@/presentation/controllers/profile/UpdateProfileController';
+import { CreateMealFromRecipeController } from '@/presentation/controllers/recipes/CreateMealFromRecipeController';
 import { DeleteRecipeController } from '@/presentation/controllers/recipes/DeleteRecipeController';
 import { ListRecipesController } from '@/presentation/controllers/recipes/ListRecipesController';
 import { SaveRecipeController } from '@/presentation/controllers/recipes/SaveRecipeController';
 import { SuggestRecipeController } from '@/presentation/controllers/recipes/SuggestRecipeController';
+import { CreateMealFromSavedMealController } from '@/presentation/controllers/savedMeals/CreateMealFromSavedMealController';
+import { DeleteSavedMealController } from '@/presentation/controllers/savedMeals/DeleteSavedMealController';
+import { ListSavedMealsController } from '@/presentation/controllers/savedMeals/ListSavedMealsController';
+import { SaveMealController } from '@/presentation/controllers/savedMeals/SaveMealController';
 import { MealFileUploadedHandler } from '@/presentation/file-events/MealFileUploadedHandler';
 import { ProcessMealConsumer } from '@/presentation/queue-consumers/ProcessMealConsumer';
 import { AppConfig } from '@/shared/config/AppConfig';
@@ -136,6 +149,8 @@ container
   .bind(RecipeRepository, DynamoRecipeRepository, { scope: 'singleton' })
   .bind(RecipeGenerator, OpenAIRecipeGenerator, { scope: 'singleton' })
   .bind(ListRecipesQuery, DynamoListRecipesQuery, { scope: 'singleton' })
+  .bind(SavedMealRepository, DynamoSavedMealRepository, { scope: 'singleton' })
+  .bind(ListSavedMealsQuery, DynamoListSavedMealsQuery, { scope: 'singleton' })
   .bind(ListMealsByDayQuery, DynamoListMealsByDayQuery, { scope: 'singleton' })
   .bind(GetMealQuery, DynamoGetMealQuery, { scope: 'singleton' })
   .bind(UserIdResolver, DynamoUserIdResolver, { scope: 'singleton' })
@@ -167,6 +182,14 @@ container
   .bind(UpdateMealUseCase, UpdateMealUseCase, { scope: 'singleton' })
   .bind(DeleteMealUseCase, DeleteMealUseCase, { scope: 'singleton' })
   .bind(ReprocessMealUseCase, ReprocessMealUseCase, { scope: 'singleton' })
+  .bind(CreateMealFromRecipeUseCase, CreateMealFromRecipeUseCase, {
+    scope: 'singleton',
+  })
+  .bind(CreateMealFromSavedMealUseCase, CreateMealFromSavedMealUseCase, {
+    scope: 'singleton',
+  })
+  .bind(SaveMealUseCase, SaveMealUseCase, { scope: 'singleton' })
+  .bind(DeleteSavedMealUseCase, DeleteSavedMealUseCase, { scope: 'singleton' })
   .bind(AnalyzeMealItemsUseCase, AnalyzeMealItemsUseCase, {
     scope: 'singleton',
   })
@@ -219,6 +242,19 @@ container
   .bind(SaveRecipeController, SaveRecipeController, { scope: 'transient' })
   .bind(ListRecipesController, ListRecipesController, { scope: 'transient' })
   .bind(DeleteRecipeController, DeleteRecipeController, {
+    scope: 'transient',
+  })
+  .bind(CreateMealFromRecipeController, CreateMealFromRecipeController, {
+    scope: 'transient',
+  })
+  .bind(SaveMealController, SaveMealController, { scope: 'transient' })
+  .bind(ListSavedMealsController, ListSavedMealsController, {
+    scope: 'transient',
+  })
+  .bind(DeleteSavedMealController, DeleteSavedMealController, {
+    scope: 'transient',
+  })
+  .bind(CreateMealFromSavedMealController, CreateMealFromSavedMealController, {
     scope: 'transient',
   });
 

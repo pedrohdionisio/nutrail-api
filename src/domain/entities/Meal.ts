@@ -1,7 +1,9 @@
 import { InvalidMealTransitionError } from '../errors/InvalidMealTransitionError';
 import { MealNotEditableError } from '../errors/MealNotEditableError';
+import { MealNotSavableError } from '../errors/MealNotSavableError';
 import { MealWithoutItemsError } from '../errors/MealWithoutItemsError';
-import type { Macros } from '../value-objects/Macros';
+import { type Macros, sumMacros } from '../value-objects/Macros';
+import { SavedMeal } from './SavedMeal';
 
 export const MEAL_STATUSES = [
   'UPLOADING',
@@ -29,6 +31,12 @@ export type MealAnalysis = {
 export type MealEdition = MealAnalysis & {
   date: string;
   time: string;
+};
+
+export type MealSave = {
+  id: string;
+  name: string;
+  createdAt: string;
 };
 
 type MealProps = {
@@ -115,17 +123,7 @@ export class Meal {
   }
 
   get totals(): Macros {
-    const sum = (key: keyof Macros) =>
-      Math.round(
-        this._items.reduce((total, item) => total + item[key], 0) * 10,
-      ) / 10;
-
-    return {
-      calories: Math.round(sum('calories')),
-      protein: sum('protein'),
-      carbohydrate: sum('carbohydrate'),
-      fat: sum('fat'),
-    };
+    return sumMacros(this._items);
   }
 
   markAsQueued(): void {
@@ -197,6 +195,20 @@ export class Meal {
     this._items = items;
     this._date = date;
     this._time = time;
+  }
+
+  saveAs({ id, name, createdAt }: MealSave): SavedMeal {
+    if (this._status !== 'SUCCESS') {
+      throw new MealNotSavableError();
+    }
+
+    return new SavedMeal({
+      id,
+      userId: this.userId,
+      name,
+      items: this._items.map((item) => ({ ...item })),
+      createdAt,
+    });
   }
 
   private transition(from: MealStatus[], to: MealStatus): void {

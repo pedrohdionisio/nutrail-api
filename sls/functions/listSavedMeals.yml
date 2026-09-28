@@ -1,0 +1,8 @@
+listSavedMeals:
+  handler: src/main/functions/listSavedMeals.handler
+  events:
+    - httpApi:
+        method: GET
+        path: /saved-meals
+        authorizer:
+          name: cognito
