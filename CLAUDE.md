@@ -1,65 +1,123 @@
 # Nutrail API
 
-A fonte de verdade da arquitetura é [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Em caso de conflito com o foodiary ou com qualquer outra referência, o documento vence.
+Backend do Nutrail, um diário alimentar com IA: o usuário registra a refeição por foto, áudio ou
+texto e recebe os itens com calorias e macros; também pede receitas com o que tem em casa. Projeto
+de portfólio, feito com padrão de produção.
 
-## Ferramentas
+O Nutrail são três repositórios lado a lado:
 
-- Gerenciador de pacotes: **pnpm**. Nunca usar npm ou yarn.
-- Lint e formatação: **Biome** (`pnpm lint`, `pnpm lint:fix`). Não adicionar ESLint nem Prettier.
-- Tipos: `pnpm typecheck`. Testes: `pnpm test` (Vitest). Rodar `pnpm lint`, `pnpm typecheck` e `pnpm test` antes de considerar uma tarefa concluída.
-- Deploy: Serverless Framework v4, região `us-east-1`, runtime `nodejs24.x`. Empacotamento por função (`package.individually: true`): cada bundle carrega o container inteiro, e um zip único estoura o limite de 250 MB da Lambda.
-- Novas funções ficam em `sls/functions/*.yml` e novos recursos em `sls/resources/*.yml`, ambos referenciados no `serverless.yml`.
+- `nutrail-api` (este): API 100% serverless na AWS
+- `../nutrail-app`: app React Native (Expo), o único cliente da API
+- `../nutrail`: README do produto
 
-## Código
+A fonte de verdade da arquitetura é [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): modelagem do
+DynamoDB, fluxos, endpoints e o motivo de cada decisão. Em caso de conflito com o foodiary ou com
+qualquer outra referência, o documento vence.
 
-- **Sem comentários de código.** Explicações vão na conversa, não no arquivo. Só são permitidos comentários funcionais (`biome-ignore`, `@type` em JS e similares).
-- Imports internos usam o alias `@/` (ex.: `@/application/ports/UserIdResolver`). Imports relativos só dentro da mesma pasta ou para a pasta vizinha imediata.
-- Aspas simples, indentação de 2 espaços, LF. O Biome e o `.editorconfig` já garantem isso.
-- Uma linha em branco entre contextos: entre `if`s consecutivos, entre um bloco de `const`s relacionados e o próximo, entre um `const` e o `if` que o testa, e antes de todo `return` ou `throw` que não seja a primeira linha do bloco.
-- Um use case, controller, port ou implementação por arquivo. O nome do arquivo é igual ao nome da classe (`CreateMealUseCase.ts`).
-- Não criar abstrações, configurações ou pontos de extensão especulativos. Implementar só o que a tarefa pede.
+## Como trabalhar aqui
 
-## Camadas e dependências
+- **Faça só o que foi pedido.** Sem passos, refatorações ou arquivos que o pedido não chamou.
+  Achou um problema em outro lugar, relate em vez de corrigir no caminho.
+- **Converse em português.** Código, identificadores, mensagens de erro da API, títulos de teste,
+  commits e o README ficam em inglês.
+- **Commit só quando pedido**, na branch atual. Nunca criar branch, dar push ou amend sem pedido.
+- **Verificação depois de toda mudança: `pnpm lint && pnpm typecheck && pnpm test`**, relatada com
+  o resultado. Os testes não dependem de AWS nem de Docker.
+- **Nunca rode `pnpm run deploy`, `serverless deploy` ou `pnpm upload:meal` sem pedido explícito.** Os
+  três falam com a AWS e a OpenAI de verdade.
+- **Sem comentários de código.** Explicações vão na conversa, não no arquivo. Só são permitidos
+  comentários funcionais (`biome-ignore`, `@type` em JS e similares).
 
-- As dependências apontam para dentro: `main → presentation → application → domain`, e `infra → application/domain`.
-- `domain` não importa nenhuma lib externa.
-- `application` não importa nada de `infra`, nem SDKs da AWS ou da OpenAI.
-- `main/container` é o único lugar que liga ports a implementações.
-- Clients da AWS e da OpenAI são injetados via `bindFactory`, nunca exportados como singleton de módulo.
-- Ids vêm do port `IdGenerator` e "agora" vem do port `Clock`. Nunca chamar `ulid()` ou `new Date()` direto em domain ou application.
+## Onde ficam as regras
 
-## Injeção de dependência
+As regras de cada camada ficam em `.claude/rules/` e carregam quando um arquivo do caminho é lido:
 
-- Ports são `abstract class` com apenas métodos abstratos. Nunca usar `interface` como dependência injetada: ela vira `Object` na metadata e o container rejeita.
-- Implementações levam o prefixo da tecnologia: `MealRepository` → `DynamoMealRepository`.
-- Toda classe com dependências no construtor recebe `@Injectable()`.
-- **Nunca usar `import type` para classes recebidas no construtor.** Isso apaga a metadata e quebra o auto-wiring. Por isso a regra `useImportType` do Biome fica desligada; não religar.
-- A chave do container é sempre o construtor. Nunca usar `class.name` como chave.
-- Todo binding novo vai em `main/container/index.ts`, com escopo explícito. Use cases que dependem de `Saga` são `transient`, e quem depende deles também.
+| Regra | Cobre |
+|---|---|
+| `application.md` | entidades, value objects, erros, ports, queries, use cases, Saga |
+| `presentation.md` | controllers, schemas Zod, adapters, handlers, o contrato com o app |
+| `infra.md` | DynamoDB, S3, SQS, Cognito, SES, OpenAI e prompts |
+| `composition.md` | container de DI, `AppConfig`, `serverless.yml` e `sls/` |
+| `testing.md` | Vitest, fakes, fixtures, testes de use case, feature e infra |
 
-## Apresentação
+Os fluxos de trabalho são skills que orquestram subagents especialistas:
 
-- Controllers estendem `Controller<'public' | 'private'>` e declaram o body com `@Schema(zodSchema)`.
-- Schemas Zod ficam em `controllers/<módulo>/schemas/<nome>Schema.ts`, exportando o schema (`signUpSchema`) e o tipo inferido (`SignUpBody`). Nunca declarar o schema dentro do controller.
-- Handlers das Lambdas têm uma linha: `export const handler = lambdaHttpAdapter(XController);`
-- Erros de negócio estendem `DomainError` (domain) ou `ApplicationError` (application), com `code` e `statusCode`. `HttpError` é só para a camada de apresentação e os adapters.
-- Toda rota privada precisa de authorizer no `serverless.yml`. É ele que faz o adapter resolver o `userId`.
+- `/feature-builder` — uma feature de ponta a ponta: spec → `api-builder` → `test-writer` →
+  verificação → `code-reviewer` → docs.
+- `/bug-fixer` — reproduz com um teste que falha, corrige, verifica e revisa.
 
-## Dados
+## Stack
 
-- DynamoDB single-table, seguindo as chaves e os access patterns da seção 3 do documento de arquitetura.
-- `createdAt` em ISO 8601 UTC. `date` e `birthDate` em `YYYY-MM-DD`. A `date` da refeição vem do app e nunca é derivada do UTC.
-- No S3, guardar sempre a chave, nunca a URL.
+- Node.js 24 + TypeScript (strict, decorators legados) · Zod 4 · ULID
+- Container de DI próprio (`kernel/di`), com auto-wiring por `design:paramtypes`
+- AWS via Serverless Framework v4 (`us-east-1`, `nodejs24.x`, arm64): Lambda, API Gateway HTTP API,
+  DynamoDB single-table, S3, EventBridge, SQS + DLQ, Cognito, SES, CloudWatch e SNS
+- OpenAI (Responses API com Structured Outputs e transcrição) · React Email
+- Vitest + `aws-sdk-client-mock` · Biome · pnpm
 
-## Testes
+## Arquitetura
 
-Vitest, com o `unplugin-swc` no `vitest.config.ts` para emitir os metadados dos decorators (sem eles o container não resolve nada). `aws-sdk-client-mock` simula os clients da AWS.
+Clean architecture com inversão de dependência. As dependências apontam para dentro:
+`main → presentation → application → domain`, e `infra → application/domain`. `main/container` é o
+único lugar que liga cada port à sua implementação.
 
-- Teste **nunca** fica em `src/`. `tests/` espelha `src/`: `src/domain/entities/Meal.ts` → `tests/domain/entities/Meal.test.ts`.
-- `tests/support/` guarda a infraestrutura e não espelha nada: `setup.ts` (env de teste), `fixtures/` (`build<Entidade>(overrides)`), `fakes/` (um fake em memória por port, montados juntos por `createFakes()`), `app.ts` (harness dos testes de feature) e `dynamo.ts`.
-- **Domínio e serviços:** teste unitário direto.
-- **Use case:** instanciado à mão com os fakes de `createFakes()`, sem container. Afirme o estado final (o que ficou no `InMemoryDatabase`, o que foi publicado ou enviado), não as chamadas.
-- **Feature:** um arquivo por função em `tests/main/functions/`, chamando o `handler` real com `invoke()`. O `app.ts` troca cada port do container por um fake recriado a cada teste; `givenSignedInUser()` cria o usuário e o `as` da requisição faz o papel do authorizer. Cubra o caminho feliz, os erros de negócio (status e `code`) e a validação.
-- **Infra:** adapter testado com o SDK simulado (`mockClient`) ou com o client da OpenAI espionado (`vi.spyOn`), afirmando o comando enviado (chaves, índice, condição) e o mapeamento da resposta e dos erros.
-- Fake novo entra em `createFakes()` e no `app.ts`; port novo sem fake quebra os testes de feature que o resolvem.
+```
+src/
+  domain/         entidades ricas, value objects, GoalCalculator e erros de domínio; nenhuma lib
+  application/    ports (abstract classes), use cases por módulo, Saga, mealFiles e erros
+  infra/          Dynamo*, S3, SQS, Cognito, SES + templates, OpenAI + prompts, Ulid e SystemClock
+  presentation/   controllers + schemas Zod, handler de evento do S3, consumer do SQS
+  main/           container (composition root), adapters das Lambdas e functions (uma linha)
+  kernel/         Container, @Injectable e @Schema
+  shared/config/  AppConfig
+sls/
+  functions/      uma função por arquivo
+  resources/      DynamoDB, S3, SQS, Cognito e monitoramento
+```
 
+## Convenções
+
+- Imports internos usam o alias `@/`. Imports relativos só dentro da mesma pasta ou para a pasta
+  vizinha imediata.
+- Aspas simples, indentação de 2 espaços, LF. O Biome e o `.editorconfig` garantem isso.
+- Uma linha em branco entre contextos: entre `if`s consecutivos, entre um bloco de `const`s
+  relacionados e o próximo, entre um `const` e o `if` que o testa, e antes de todo `return` ou
+  `throw` que não seja a primeira linha do bloco.
+- Um use case, controller, port ou implementação por arquivo. O nome do arquivo é o nome da classe
+  (`CreateMealUseCase.ts`).
+- Não criar abstrações, configurações ou pontos de extensão especulativos.
+
+## Regras inegociáveis
+
+1. **Todo dado pertence ao usuário da sessão.** O `userId` vem do `lambdaHttpAdapter`, resolvido
+   pelo `UserIdResolver` a partir do `sub` do access token, e nunca de body, params ou query. Toda
+   chave do DynamoDB e todo prefixo do S3 começam pelo `userId` (`USER#{userId}`,
+   `pictures/{userId}/`). Toda rota privada tem o authorizer `cognito` no `sls/functions`.
+2. **`domain` e `application` não conhecem a infra.** `domain` não importa lib nenhuma;
+   `application` não importa `infra`, SDK da AWS nem da OpenAI.
+3. **A DI depende da metadata dos construtores.** Ports são `abstract class`, nunca `interface`;
+   classes recebidas no construtor nunca vêm por `import type`; a chave do container é o construtor,
+   nunca `class.name`. A regra `useImportType` do Biome fica desligada; não religar.
+4. **O status da `Meal` só muda pelos métodos da entidade** (`markAsQueued()`, `complete()`,
+   `fail()`, `retry()`...), e os totais de calorias e macros são sempre derivados dos `items`.
+   Nenhum use case seta `status` nem totais.
+5. **`date` e `time` da refeição são locais e vêm do app.** Nunca derivar de UTC. Ids vêm do port
+   `IdGenerator` e "agora" do port `Clock`; nunca `ulid()` ou `new Date()` em domain ou application.
+6. **No S3 guarda-se a chave, nunca a URL.** As leituras devolvem URL assinada (`pictureUrl`).
+7. **O pipeline assíncrono tolera repetição.** O consumer só processa meal em `QUEUED`, as gravações
+   do processamento exigem que o item exista (`attribute_exists`), o SQS usa partial batch
+   response e as 3 tentativas acompanham o `maxReceiveCount: 3`.
+8. **Rota síncrona com IA cabe nos 30 s do HTTP API**: Lambda com `timeout: 29` e client da OpenAI
+   com 25 s e 1 retry.
+9. **Exclusão apaga os arquivos antes do item** (meal e conta), para que uma falha no meio possa ser
+   repetida pelo próprio usuário e nunca deixe arquivo órfão.
+10. **O `code` do erro e os campos de resposta são contrato.** O app traduz cada `code` para
+    português e lê os campos pelo nome. Renomear ou remover exige conferir o `../nutrail-app`.
+
+## Fora de escopo por enquanto
+
+- Histórico de peso e resumo por período: são as próximas features, desenhadas na seção 9 do
+  documento de arquitetura.
+- CloudFront na frente do S3, e refeição manual e sugestão de receita pela fila: só se custo ou
+  latência pedirem.
+- Chat com coach de IA, gamificação, recursos sociais e micronutrientes.
