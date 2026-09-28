@@ -16,6 +16,8 @@ export const updateMealSchema = z.object({
     )
     .min(1)
     .max(50),
+  date: z.iso.date().optional(),
+  time: z.iso.time({ precision: -1 }).optional(),
 });
 
 export type UpdateMealBody = z.infer<typeof updateMealSchema>;

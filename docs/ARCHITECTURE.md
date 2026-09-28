@@ -135,7 +135,8 @@ type Ingredient = {
 - **Datas:** o DynamoDB não tem tipo Date. `createdAt` em ISO 8601 (UTC). `date` e `birthDate` em `YYYY-MM-DD`.
 - **Data local:** o app envia a data local (`YYYY-MM-DD`) na criação da refeição. Nunca derivar `date` a partir do UTC, senão uma janta às 22h em UTC-3 cai no dia seguinte.
 - **Arquivos:** guardar sempre a **chave** do S3, nunca a URL. URLs são geradas na leitura.
-- **Totais do dia:** calculados somando as refeições do dia. Não existe item agregado. O `GET /meals?date=` devolve a lista e os totais juntos, considerando só refeições em `SUCCESS`, em ordem cronológica (GSI1SK). O `GET /meals/{mealId}` devolve a refeição em qualquer status (é o endpoint de polling).
+- **Refeições do dia:** o `GET /meals?date=` devolve a lista e os totais juntos. A lista traz as refeições em `QUEUED`, `PROCESSING`, `SUCCESS` e `FAILED`, com `status` e `time`, ordenadas pelo `time` (e pelo `createdAt` no empate); só ficam de fora as meals em `UPLOADING`, cujo upload nunca terminou. Assim o app mostra a análise em andamento e a falha, que o usuário pode reprocessar ou excluir. A ordenação é feita em memória, porque a query já lê o dia inteiro e o GSI1SK (`MEAL#{createdAt}`) não acompanha o horário editado.
+- **Totais do dia:** calculados somando só as refeições em `SUCCESS`. Não existe item agregado. O `GET /meals/{mealId}` devolve a refeição em qualquer status (é o endpoint de polling).
 
 ---
 
@@ -174,7 +175,11 @@ O sign-up acontece no fim do onboarding e recebe dados da conta e do perfil junt
 
 Se o passo 5 falhar, a Saga remove o usuário do Cognito, evitando um usuário sem perfil. Como as metas estão embutidas no PROFILE, é uma gravação só e não precisa de UnitOfWork.
 
-### 4.3 Exclusão da conta
+### 4.3 Troca de senha
+
+`PUT /me/password` → `ChangePasswordUseCase` recebe `{ currentPassword, newPassword }` (nova senha com pelo menos 8 caracteres, a política do pool). O `AuthProvider.changePassword` confere a senha atual com um `InitiateAuth` (`USER_PASSWORD_AUTH`, os tokens gerados são descartados) e grava a nova com `AdminSetUserPassword`, o mesmo comando do sign-up. Assim o controller não precisa do access token bruto, que o `ChangePassword` do Cognito exigiria. Senha atual errada → 400 `INVALID_CURRENT_PASSWORD`, nunca 401, para o app não confundir com sessão expirada. As sessões abertas continuam válidas.
+
+### 4.4 Exclusão da conta
 
 `DELETE /me` → `DeleteAccountUseCase` apaga tudo do usuário, nesta ordem:
 
@@ -329,7 +334,7 @@ container.bind(CreateMealUseCase, CreateMealUseCase, { scope: 'transient' });
 
 - **Entidades ricas:** as transições de status da `Meal` são métodos da entidade (`markAsQueued()`, `markAsProcessing()`, `complete(result)`, `fail()`), que validam a transição. Os use cases não setam `status` diretamente.
 - **Totais derivados:** os macros totais da `Meal` são sempre calculados a partir de `items`. Editar um item recalcula os totais sem chamar a IA.
-- **Edição:** `PUT /meals/{mealId}` substitui `name` e `items` (os macros de cada item vêm do app) e devolve os totais recalculados. Só meals em `SUCCESS` podem ser editadas (`edit()`), e sempre com pelo menos um item.
+- **Edição:** `PUT /meals/{mealId}` substitui `name` e `items` (os macros de cada item vêm do app) e, opcionalmente, `date` e `time`, e devolve a meal com os totais recalculados. Só meals em `SUCCESS` podem ser editadas (`edit()`), e sempre com pelo menos um item. Trocar a `date` move a meal de dia: a gravação regrava o item inteiro, com o GSI1PK da nova data.
 - **Macros de um item editado:**
   - Mesma unidade, só a quantidade mudou: o **app** recalcula por regra de três sobre os valores do item (`novo = atual × novaQuantidade / quantidadeAtual`), sem chamar a API.
   - Qualquer outra mudança (troca de unidade, alimento novo): o app chama `POST /meals/items/analysis` com `{ text }` (ex.: "2 colheres de sopa de azeite", até 500 caracteres) e recebe `{ items }`, analisados pela IA de forma síncrona (`MealAnalyzer.analyzeItems`, timeout de 29 s). O endpoint não grava nada; o app monta a lista e envia no `PUT`. Sem alimento no texto → 422 `MEAL_WITHOUT_ITEMS`.
@@ -440,6 +445,7 @@ O cliente reenvia a receita inteira. O risco de adulteração dos macros é acei
 | POST | `/auth/forgot-password/confirm` | pública |
 | GET | `/me` | privada |
 | DELETE | `/me` | privada |
+| PUT | `/me/password` | privada |
 | PUT | `/profile` | privada |
 | PUT | `/goals` | privada |
 | POST | `/meals` | privada |

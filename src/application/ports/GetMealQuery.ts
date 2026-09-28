@@ -11,6 +11,7 @@ export type MealDetails = Macros & {
   status: MealStatus;
   inputType: MealInputType;
   date: string;
+  time: string;
   items: MealItem[];
   pictureKey: string | null;
   createdAt: string;

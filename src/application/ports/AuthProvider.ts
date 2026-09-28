@@ -23,5 +23,12 @@ export abstract class AuthProvider {
     password: string;
   }): Promise<void>;
 
+  abstract changePassword(input: {
+    externalId: string;
+    email: string;
+    currentPassword: string;
+    newPassword: string;
+  }): Promise<void>;
+
   abstract deleteUser(externalId: string): Promise<void>;
 }

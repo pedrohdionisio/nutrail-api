@@ -42,7 +42,13 @@ export class UpdateMealController extends Controller<
 
     return {
       statusCode: 200,
-      body: { name: meal.name, items: meal.items, ...meal.totals },
+      body: {
+        name: meal.name,
+        items: meal.items,
+        date: meal.date,
+        time: meal.time,
+        ...meal.totals,
+      },
     };
   }
 }

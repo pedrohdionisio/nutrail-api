@@ -11,7 +11,9 @@ import { AppConfig } from '@/shared/config/AppConfig';
 const ATTRIBUTES = [
   'id',
   'name',
+  'status',
   'inputType',
+  'time',
   'calories',
   'protein',
   'carbohydrate',
@@ -43,15 +45,14 @@ export class DynamoListMealsByDayQuery implements ListMealsByDayQuery {
           TableName: this.config.tableName,
           IndexName: 'GSI1',
           KeyConditionExpression: 'GSI1PK = :pk',
-          FilterExpression: '#status = :success',
+          FilterExpression: '#status <> :uploading',
           ProjectionExpression: ATTRIBUTES.map((name) => `#${name}`).join(', '),
-          ExpressionAttributeNames: {
-            '#status': 'status',
-            ...Object.fromEntries(ATTRIBUTES.map((name) => [`#${name}`, name])),
-          },
+          ExpressionAttributeNames: Object.fromEntries(
+            ATTRIBUTES.map((name) => [`#${name}`, name]),
+          ),
           ExpressionAttributeValues: {
             ':pk': `MEAL#${userId}#${date}`,
-            ':success': 'SUCCESS',
+            ':uploading': 'UPLOADING',
           },
           ExclusiveStartKey: cursor,
         }),
@@ -60,8 +61,10 @@ export class DynamoListMealsByDayQuery implements ListMealsByDayQuery {
       for (const item of Items) {
         meals.push({
           id: item.id,
-          name: item.name,
+          name: item.name ?? null,
+          status: item.status,
           inputType: item.inputType,
+          time: item.time,
           calories: item.calories,
           protein: item.protein,
           carbohydrate: item.carbohydrate,
@@ -74,7 +77,15 @@ export class DynamoListMealsByDayQuery implements ListMealsByDayQuery {
       cursor = LastEvaluatedKey;
     } while (cursor);
 
-    return { meals, totals: sumTotals(meals) };
+    meals.sort(
+      (a, b) =>
+        a.time.localeCompare(b.time) || a.createdAt.localeCompare(b.createdAt),
+    );
+
+    return {
+      meals,
+      totals: sumTotals(meals.filter(({ status }) => status === 'SUCCESS')),
+    };
   }
 }
 

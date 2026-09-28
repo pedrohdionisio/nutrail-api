@@ -84,6 +84,7 @@ functions:
   - ${file(sls/functions/customMessage.yml)}
   - ${file(sls/functions/getMe.yml)}
   - ${file(sls/functions/deleteMe.yml)}
+  - ${file(sls/functions/changePassword.yml)}
   - ${file(sls/functions/updateProfile.yml)}
   - ${file(sls/functions/updateGoals.yml)}
   - ${file(sls/functions/createManualMeal.yml)}

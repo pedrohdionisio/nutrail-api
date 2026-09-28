@@ -17,6 +17,7 @@ import {
 import { EmailAlreadyInUseError } from '@/application/errors/EmailAlreadyInUseError';
 import { InvalidCodeError } from '@/application/errors/InvalidCodeError';
 import { InvalidCredentialsError } from '@/application/errors/InvalidCredentialsError';
+import { InvalidCurrentPasswordError } from '@/application/errors/InvalidCurrentPasswordError';
 import { InvalidRefreshTokenError } from '@/application/errors/InvalidRefreshTokenError';
 import { TooManyAttemptsError } from '@/application/errors/TooManyAttemptsError';
 import type {
@@ -143,6 +144,41 @@ export class CognitoAuthProvider implements AuthProvider {
 
       throw error;
     }
+  }
+
+  async changePassword(input: {
+    externalId: string;
+    email: string;
+    currentPassword: string;
+    newPassword: string;
+  }): Promise<void> {
+    try {
+      await this.client.send(
+        new InitiateAuthCommand({
+          ClientId: this.config.cognito.clientId,
+          AuthFlow: 'USER_PASSWORD_AUTH',
+          AuthParameters: {
+            USERNAME: input.email,
+            PASSWORD: input.currentPassword,
+          },
+        }),
+      );
+    } catch (error) {
+      if (error instanceof NotAuthorizedException) {
+        throw new InvalidCurrentPasswordError();
+      }
+
+      throw error;
+    }
+
+    await this.client.send(
+      new AdminSetUserPasswordCommand({
+        UserPoolId: this.config.cognito.userPoolId,
+        Username: input.externalId,
+        Password: input.newPassword,
+        Permanent: true,
+      }),
+    );
   }
 
   async deleteUser(externalId: string): Promise<void> {

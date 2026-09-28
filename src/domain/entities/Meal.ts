@@ -26,6 +26,11 @@ export type MealAnalysis = {
   items: MealItem[];
 };
 
+export type MealEdition = MealAnalysis & {
+  date: string;
+  time: string;
+};
+
 type MealProps = {
   id: string;
   userId: string;
@@ -47,9 +52,9 @@ export class Meal {
   readonly userId: string;
   readonly inputType: MealInputType;
   readonly inputFileKey: string | null;
-  readonly date: string;
-  readonly time: string;
   readonly createdAt: string;
+  private _date: string;
+  private _time: string;
   private _status: MealStatus;
   private _inputText: string | null;
   private _pictureKey: string | null;
@@ -62,8 +67,8 @@ export class Meal {
     this.userId = props.userId;
     this.inputType = props.inputType;
     this.inputFileKey = props.inputFileKey;
-    this.date = props.date;
-    this.time = props.time;
+    this._date = props.date;
+    this._time = props.time;
     this.createdAt = props.createdAt;
     this._status = props.status;
     this._inputText = props.inputText;
@@ -71,6 +76,14 @@ export class Meal {
     this._name = props.name;
     this._items = props.items;
     this._attempts = props.attempts;
+  }
+
+  get date(): string {
+    return this._date;
+  }
+
+  get time(): string {
+    return this._time;
   }
 
   get status(): MealStatus {
@@ -171,7 +184,7 @@ export class Meal {
     this._items = items;
   }
 
-  edit({ name, items }: MealAnalysis): void {
+  edit({ name, items, date, time }: MealEdition): void {
     if (this._status !== 'SUCCESS') {
       throw new MealNotEditableError();
     }
@@ -182,6 +195,8 @@ export class Meal {
 
     this._name = name;
     this._items = items;
+    this._date = date;
+    this._time = time;
   }
 
   private transition(from: MealStatus[], to: MealStatus): void {

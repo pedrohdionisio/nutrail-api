@@ -23,6 +23,7 @@ import { Transcriber } from '@/application/ports/Transcriber';
 import { UserIdResolver } from '@/application/ports/UserIdResolver';
 import { UserRepository } from '@/application/ports/UserRepository';
 import { Saga } from '@/application/services/Saga';
+import { ChangePasswordUseCase } from '@/application/usecases/account/ChangePasswordUseCase';
 import { DeleteAccountUseCase } from '@/application/usecases/account/DeleteAccountUseCase';
 import { ConfirmForgotPasswordUseCase } from '@/application/usecases/auth/ConfirmForgotPasswordUseCase';
 import { ForgotPasswordUseCase } from '@/application/usecases/auth/ForgotPasswordUseCase';
@@ -69,6 +70,7 @@ import { SignInController } from '@/presentation/controllers/auth/SignInControll
 import { SignUpController } from '@/presentation/controllers/auth/SignUpController';
 import { UpdateGoalsController } from '@/presentation/controllers/goals/UpdateGoalsController';
 import { HealthController } from '@/presentation/controllers/HealthController';
+import { ChangePasswordController } from '@/presentation/controllers/me/ChangePasswordController';
 import { DeleteMeController } from '@/presentation/controllers/me/DeleteMeController';
 import { GetMeController } from '@/presentation/controllers/me/GetMeController';
 import { AnalyzeMealItemsController } from '@/presentation/controllers/meals/AnalyzeMealItemsController';
@@ -152,6 +154,7 @@ container
   .bind(UpdateProfileUseCase, UpdateProfileUseCase, { scope: 'singleton' })
   .bind(UpdateGoalsUseCase, UpdateGoalsUseCase, { scope: 'singleton' })
   .bind(DeleteAccountUseCase, DeleteAccountUseCase, { scope: 'singleton' })
+  .bind(ChangePasswordUseCase, ChangePasswordUseCase, { scope: 'singleton' })
   .bind(CreateManualMealUseCase, CreateManualMealUseCase, {
     scope: 'singleton',
   })
@@ -184,6 +187,9 @@ container
   })
   .bind(GetMeController, GetMeController, { scope: 'transient' })
   .bind(DeleteMeController, DeleteMeController, { scope: 'transient' })
+  .bind(ChangePasswordController, ChangePasswordController, {
+    scope: 'transient',
+  })
   .bind(UpdateProfileController, UpdateProfileController, {
     scope: 'transient',
   })
