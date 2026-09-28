@@ -485,3 +485,16 @@ O cliente reenvia a receita inteira. O risco de adulteração dos macros é acei
 - **Testes unitários** dos use cases com fakes em memória dos ports (a arquitetura já está preparada para isso).
 - **Servir arquivos via CloudFront**, se as URLs assinadas do S3 ficarem caras ou lentas. O formato da resposta (`pictureUrl`) não muda.
 - **Mover a refeição manual e a sugestão de receita para a fila**, se a latência síncrona ficar ruim.
+
+### 9.1 Features futuras (em ordem de prioridade)
+
+Critério: só entra o que reduz o atrito de registrar ou mostra progresso, que é o que mantém o usuário no app depois das primeiras semanas.
+
+1. **Repetir refeição.** `POST /meals/{mealId}/copy` com `{ date, time }` copia os itens de uma refeição anterior, sem IA; opcionalmente, favoritos para achar rápido. Maior redução de atrito pelo menor custo.
+2. **Receita salva → refeição.** `POST /recipes/{recipeId}/meal` com `{ date, time }` cria a meal em `SUCCESS` com os ingredientes e os macros da receita. Liga as duas partes do produto.
+3. **Histórico de peso.** `POST /weights` e `GET /weights?from=&to=`, item `USER#{id}` / `WEIGHT#{date}`. O registro mais recente atualiza o peso do perfil e recalcula as metas (a regra do `PUT /profile` já existe).
+4. **Resumo por período.** `GET /summary?from=&to=` com totais por dia, médias e dias dentro da meta. O GSI1 é por dia (um mês = 30 queries); se pesar, gravar um resumo diário.
+
+**Depois:** lembretes para registrar (dependem de push no app) e leitura de código de barras (base externa com cobertura irregular no Brasil; a foto já cobre boa parte).
+
+**Fora de escopo:** chat com coach de IA, gamificação, recursos sociais e micronutrientes. São caros e não atacam o atrito de registrar.
