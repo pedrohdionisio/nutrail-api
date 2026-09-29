@@ -28,12 +28,13 @@ function setup(outputParsed: unknown = RAW_ANALYSIS) {
 }
 
 describe('OpenAIMealAnalyzer', () => {
-  it('should analyze a text with the local time and round the macros', async () => {
+  it('should analyze a text with the output language and local time, and round the macros', async () => {
     const { parse, analyzer } = setup();
 
     const analysis = await analyzer.analyzeText({
       text: 'arroz',
       time: '12:30',
+      language: 'en-US',
     });
 
     expect(analysis).toEqual({
@@ -59,17 +60,19 @@ describe('OpenAIMealAnalyzer', () => {
       { role: 'system', content: expect.any(String) },
       {
         role: 'user',
-        content: 'Local time: 12:30\n\nMeal description:\narroz',
+        content:
+          'Output language: American English\nLocal time: 12:30\n\nMeal description:\narroz',
       },
     ]);
   });
 
-  it('should send the picture url in high detail', async () => {
+  it('should send the picture url in high detail with the output language', async () => {
     const { parse, analyzer } = setup();
 
     await analyzer.analyzeImage({
       imageUrl: 'https://files.test/meal.jpg',
       time: '08:00',
+      language: 'pt-BR',
     });
 
     expect(parse.mock.calls[0]?.[0].input).toEqual([
@@ -77,7 +80,10 @@ describe('OpenAIMealAnalyzer', () => {
       {
         role: 'user',
         content: [
-          { type: 'input_text', text: 'Local time: 08:00' },
+          {
+            type: 'input_text',
+            text: 'Output language: Brazilian Portuguese\nLocal time: 08:00',
+          },
           {
             type: 'input_image',
             image_url: 'https://files.test/meal.jpg',
@@ -89,10 +95,20 @@ describe('OpenAIMealAnalyzer', () => {
   });
 
   it('should return only the items when analyzing items for an edit', async () => {
-    const { analyzer } = setup();
+    const { parse, analyzer } = setup();
 
-    const items = await analyzer.analyzeItems('120 g de arroz');
+    const items = await analyzer.analyzeItems({
+      text: '120 g de arroz',
+      language: 'en-US',
+    });
 
+    expect(parse.mock.calls[0]?.[0].input).toEqual([
+      { role: 'system', content: expect.any(String) },
+      {
+        role: 'user',
+        content: 'Output language: American English\n\n120 g de arroz',
+      },
+    ]);
     expect(items).toHaveLength(1);
     expect(items[0]).toMatchObject({ name: 'Arroz', calories: 156 });
   });
@@ -102,7 +118,7 @@ describe('OpenAIMealAnalyzer', () => {
     const { analyzer } = setup(null);
 
     await expect(
-      analyzer.analyzeText({ text: 'arroz', time: '12:30' }),
+      analyzer.analyzeText({ text: 'arroz', time: '12:30', language: 'pt-BR' }),
     ).rejects.toThrow(MealAnalysisFailedError);
   });
 });

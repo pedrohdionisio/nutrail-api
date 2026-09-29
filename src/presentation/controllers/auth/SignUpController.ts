@@ -17,8 +17,9 @@ export class SignUpController extends Controller<'public', SignUpBody> {
 
   protected async handle({
     body,
+    language,
   }: ControllerRequest<'public', SignUpBody>): Promise<ControllerResponse> {
-    const tokens = await this.signUp.execute(body);
+    const tokens = await this.signUp.execute({ ...body, language });
 
     return { statusCode: 201, body: tokens };
   }

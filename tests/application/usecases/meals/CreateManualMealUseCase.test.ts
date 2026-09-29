@@ -10,6 +10,7 @@ const INPUT = {
   date: '2026-09-26',
   time: '12:30',
   text: '120 g de arroz e 150 g de frango',
+  language: 'en-US' as const,
 };
 
 describe('CreateManualMealUseCase', () => {
@@ -29,7 +30,9 @@ describe('CreateManualMealUseCase', () => {
   it('should analyze the text and save the meal already analyzed', async () => {
     const meal = await createManualMeal.execute(INPUT);
 
-    expect(f.analyzer.textCalls).toEqual([{ text: INPUT.text, time: '12:30' }]);
+    expect(f.analyzer.textCalls).toEqual([
+      { text: INPUT.text, time: '12:30', language: 'en-US' },
+    ]);
     expect(meal).toMatchObject({
       id: 'id-1',
       status: 'SUCCESS',

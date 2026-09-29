@@ -51,6 +51,7 @@ export class ProcessMealUseCase {
       return this.analyzer.analyzeImage({
         imageUrl: await this.fileUrl(meal),
         time: meal.time,
+        language: meal.language,
       });
     }
 
@@ -60,7 +61,11 @@ export class ProcessMealUseCase {
 
     meal.recordTranscription(text);
 
-    return this.analyzer.analyzeText({ text, time: meal.time });
+    return this.analyzer.analyzeText({
+      text,
+      time: meal.time,
+      language: meal.language,
+    });
   }
 
   private fileUrl(meal: Meal): Promise<string> {

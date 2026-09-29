@@ -2,6 +2,7 @@ import { InvalidMealTransitionError } from '../errors/InvalidMealTransitionError
 import { MealNotEditableError } from '../errors/MealNotEditableError';
 import { MealNotSavableError } from '../errors/MealNotSavableError';
 import { MealWithoutItemsError } from '../errors/MealWithoutItemsError';
+import type { Language } from '../value-objects/Language';
 import { type Macros, sumMacros } from '../value-objects/Macros';
 import { SavedMeal } from './SavedMeal';
 
@@ -52,6 +53,7 @@ type MealProps = {
   attempts: number;
   date: string;
   time: string;
+  language: Language;
   createdAt: string;
 };
 
@@ -60,6 +62,7 @@ export class Meal {
   readonly userId: string;
   readonly inputType: MealInputType;
   readonly inputFileKey: string | null;
+  readonly language: Language;
   readonly createdAt: string;
   private _date: string;
   private _time: string;
@@ -77,6 +80,7 @@ export class Meal {
     this.inputFileKey = props.inputFileKey;
     this._date = props.date;
     this._time = props.time;
+    this.language = props.language;
     this.createdAt = props.createdAt;
     this._status = props.status;
     this._inputText = props.inputText;

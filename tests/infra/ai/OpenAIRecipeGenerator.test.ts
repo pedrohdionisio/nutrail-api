@@ -17,10 +17,11 @@ const INPUT = {
   text: 'tenho ovos e queijo',
   goal: 'LOSE' as const,
   remaining: { calories: 800, protein: 50.5, carbohydrate: 90, fat: 20 },
+  language: 'en-US' as const,
 };
 
 describe('OpenAIRecipeGenerator', () => {
-  it('should send the goal and what is left of the day and round the macros', async () => {
+  it('should send the output language, the goal and what is left of the day, and round the macros', async () => {
     const { parse, generator } = setup({
       ...buildRecipeContent(),
       calories: 419.6,
@@ -43,7 +44,7 @@ describe('OpenAIRecipeGenerator', () => {
       {
         role: 'user',
         content:
-          'Goal: LOSE\nLeft for today: 800 kcal, 50.5 g protein, 90 g carbohydrate, 20 g fat\n\nUser request:\ntenho ovos e queijo',
+          'Output language: American English\nGoal: LOSE\nLeft for today: 800 kcal, 50.5 g protein, 90 g carbohydrate, 20 g fat\n\nUser request:\ntenho ovos e queijo',
       },
     ]);
   });

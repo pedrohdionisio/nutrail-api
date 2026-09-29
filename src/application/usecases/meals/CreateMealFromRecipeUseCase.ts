@@ -4,13 +4,20 @@ import { IdGenerator } from '@/application/ports/IdGenerator';
 import { MealRepository } from '@/application/ports/MealRepository';
 import { RecipeRepository } from '@/application/ports/RecipeRepository';
 import { Meal } from '@/domain/entities/Meal';
+import type { Language } from '@/domain/value-objects/Language';
 import { Injectable } from '@/kernel/decorators/Injectable';
+
+const SERVING_UNIT: Record<Language, string> = {
+  'pt-BR': 'porção',
+  'en-US': 'serving',
+};
 
 type Input = {
   userId: string;
   recipeId: string;
   date: string;
   time: string;
+  language: Language;
 };
 
 @Injectable()
@@ -22,7 +29,13 @@ export class CreateMealFromRecipeUseCase {
     private readonly clock: Clock,
   ) {}
 
-  async execute({ userId, recipeId, date, time }: Input): Promise<Meal> {
+  async execute({
+    userId,
+    recipeId,
+    date,
+    time,
+    language,
+  }: Input): Promise<Meal> {
     const recipe = await this.recipes.findById(userId, recipeId);
 
     if (!recipe) {
@@ -42,7 +55,7 @@ export class CreateMealFromRecipeUseCase {
         {
           name: recipe.name,
           quantity: 1,
-          unit: 'porção',
+          unit: SERVING_UNIT[language],
           calories: recipe.calories,
           protein: recipe.protein,
           carbohydrate: recipe.carbohydrate,
@@ -52,6 +65,7 @@ export class CreateMealFromRecipeUseCase {
       attempts: 0,
       date,
       time,
+      language,
       createdAt: this.clock.now().toISOString(),
     });
 

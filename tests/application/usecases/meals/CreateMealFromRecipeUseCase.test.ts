@@ -26,6 +26,7 @@ describe('CreateMealFromRecipeUseCase', () => {
       recipeId: 'recipe-1',
       date: '2026-09-26',
       time: '19:00',
+      language: 'pt-BR',
     });
 
     expect(meal).toMatchObject({
@@ -51,6 +52,21 @@ describe('CreateMealFromRecipeUseCase', () => {
     expect(f.db.meals.has('id-1')).toBe(true);
   });
 
+  it('should name the serving in the language of the request', async () => {
+    f.db.putRecipe(buildRecipe());
+
+    const meal = await createMealFromRecipe.execute({
+      userId: 'user-1',
+      recipeId: 'recipe-1',
+      date: '2026-09-26',
+      time: '19:00',
+      language: 'en-US',
+    });
+
+    expect(meal.items[0]?.unit).toBe('serving');
+    expect(meal.language).toBe('en-US');
+  });
+
   it('should fail for a recipe of another user', async () => {
     f.db.putRecipe(buildRecipe({ userId: 'user-2' }));
 
@@ -60,6 +76,7 @@ describe('CreateMealFromRecipeUseCase', () => {
         recipeId: 'recipe-1',
         date: '2026-09-26',
         time: '19:00',
+        language: 'pt-BR',
       }),
     ).rejects.toThrow(RecipeNotFoundError);
     expect(f.db.meals.size).toBe(0);

@@ -15,6 +15,8 @@ paths:
   ausente vira o `NotFoundError` do recurso.
 - Rota privada recebe o `userId` pronto em `request.userId`. O controller nunca lê o token nem o
   `sub`.
+- Toda requisição traz `request.language` (`pt-BR` | `en-US`), resolvido do `Accept-Language` pelo
+  adapter. Use case que gera texto para o usuário (IA, e-mail, unidade) recebe o `language`.
 - Escrita chama o use case. Leitura simples pode chamar a query direto (`GetMealController` usa
   `GetMealQuery`), sem use case de passagem.
 - A resposta é montada campo a campo no controller: nenhuma entidade, item do DynamoDB ou chave do
@@ -55,8 +57,8 @@ paths:
 
 ## O contrato com o app
 
-- O `nutrail-app` escreve os services à mão contra estas rotas e traduz cada `code` para português
-  em `data/config/apiError.ts`. A `message` é técnica, em inglês, e o app não a exibe.
+- O `nutrail-app` escreve os services à mão contra estas rotas e traduz cada `code` para português e
+  inglês nos dicionários de `data/config/locales`. A `message` é técnica, em inglês, e o app não a exibe.
 - Remover ou renomear campo de resposta, mudar status ou `code`, ou apertar a validação quebra o
   app: antes, procure a rota e o campo em `../nutrail-app/src` e diga quais arquivos são afetados.
 - Rota nova ou alterada vai para a tabela de endpoints (seção 7.5) de `docs/ARCHITECTURE.md`.

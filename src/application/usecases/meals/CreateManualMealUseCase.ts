@@ -3,6 +3,7 @@ import { IdGenerator } from '@/application/ports/IdGenerator';
 import { MealAnalyzer } from '@/application/ports/MealAnalyzer';
 import { MealRepository } from '@/application/ports/MealRepository';
 import { Meal } from '@/domain/entities/Meal';
+import type { Language } from '@/domain/value-objects/Language';
 import { Injectable } from '@/kernel/decorators/Injectable';
 
 type Input = {
@@ -10,6 +11,7 @@ type Input = {
   date: string;
   time: string;
   text: string;
+  language: Language;
 };
 
 @Injectable()
@@ -21,7 +23,7 @@ export class CreateManualMealUseCase {
     private readonly clock: Clock,
   ) {}
 
-  async execute({ userId, date, time, text }: Input): Promise<Meal> {
+  async execute({ userId, date, time, text, language }: Input): Promise<Meal> {
     const meal = new Meal({
       id: this.ids.generate(),
       userId,
@@ -35,10 +37,11 @@ export class CreateManualMealUseCase {
       attempts: 1,
       date,
       time,
+      language,
       createdAt: this.clock.now().toISOString(),
     });
 
-    meal.complete(await this.analyzer.analyzeText({ text, time }));
+    meal.complete(await this.analyzer.analyzeText({ text, time, language }));
 
     await this.meals.create(meal);
 

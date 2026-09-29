@@ -8,6 +8,7 @@ import type {
   AuthTokens,
   Credentials,
 } from '@/application/ports/AuthProvider';
+import type { Language } from '@/domain/value-objects/Language';
 
 type Account = { externalId: string; email: string; password: string };
 
@@ -15,7 +16,7 @@ export const RESET_CODE = '123456';
 
 export class FakeAuthProvider implements AuthProvider {
   readonly accounts = new Map<string, Account>();
-  readonly resetRequests: string[] = [];
+  readonly resetRequests: { email: string; language: Language }[] = [];
   readonly deletedExternalIds: string[] = [];
   private count = 0;
 
@@ -60,8 +61,11 @@ export class FakeAuthProvider implements AuthProvider {
     return tokensFor(account.externalId);
   }
 
-  async forgotPassword(email: string): Promise<void> {
-    this.resetRequests.push(email);
+  async forgotPassword(input: {
+    email: string;
+    language: Language;
+  }): Promise<void> {
+    this.resetRequests.push(input);
   }
 
   async confirmForgotPassword({

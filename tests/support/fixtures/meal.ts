@@ -51,6 +51,7 @@ export function buildMeal(overrides: MealOverrides = {}): Meal {
     attempts: 1,
     date: '2026-09-26',
     time: '12:30',
+    language: 'pt-BR',
     createdAt: '2026-09-26T15:30:00.000Z',
     ...overrides,
   });

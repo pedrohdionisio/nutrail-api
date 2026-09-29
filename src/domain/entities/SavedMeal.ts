@@ -1,3 +1,4 @@
+import type { Language } from '../value-objects/Language';
 import { type Macros, sumMacros } from '../value-objects/Macros';
 import { Meal, type MealItem } from './Meal';
 
@@ -13,6 +14,7 @@ export type SavedMealLog = {
   id: string;
   date: string;
   time: string;
+  language: Language;
   createdAt: string;
 };
 
@@ -35,7 +37,7 @@ export class SavedMeal {
     return sumMacros(this.items);
   }
 
-  toMeal({ id, date, time, createdAt }: SavedMealLog): Meal {
+  toMeal({ id, date, time, language, createdAt }: SavedMealLog): Meal {
     return new Meal({
       id,
       userId: this.userId,
@@ -49,6 +51,7 @@ export class SavedMeal {
       attempts: 0,
       date,
       time,
+      language,
       createdAt,
     });
   }

@@ -6,7 +6,7 @@ Documento de referência com as decisões tomadas para a API do Nutrail. Sempre 
 
 ## 1. Produto
 
-App de controle de calorias e macros (calorias, proteínas, carboidratos e gorduras) com IA no centro da experiência. Bilíngue (pt-BR e en).
+App de controle de calorias e macros (calorias, proteínas, carboidratos e gorduras) com IA no centro da experiência. Bilíngue (pt-BR e en-US): o app manda o idioma em toda requisição, e tudo o que a API gera para o usuário sai nele (seção 3.5).
 
 **Fluxos principais**
 
@@ -99,6 +99,7 @@ As metas ficam embutidas no item do usuário porque a home sempre precisa das du
 | `attempts` | number | Tentativas de processamento |
 | `date` | string | `YYYY-MM-DD` na data **local** do usuário |
 | `time` | string | `HH:mm` no horário **local** do usuário; usado pela IA para nomear a refeição |
+| `language` | enum | `pt-BR` \| `en-US`, o idioma do app na criação; a análise assíncrona e o reprocessamento respondem nele. Itens antigos sem o atributo são lidos como `pt-BR` |
 | `createdAt` | string | ISO 8601 |
 
 **Recipe**
@@ -151,6 +152,16 @@ type Ingredient = {
 - **Refeições do dia:** o `GET /meals?date=` devolve a lista e os totais juntos. A lista traz as refeições em `QUEUED`, `PROCESSING`, `SUCCESS` e `FAILED`, com `status` e `time`, ordenadas pelo `time` (e pelo `createdAt` no empate); só ficam de fora as meals em `UPLOADING`, cujo upload nunca terminou. Assim o app mostra a análise em andamento e a falha, que o usuário pode reprocessar ou excluir. A ordenação é feita em memória, porque a query já lê o dia inteiro e o GSI1SK (`MEAL#{createdAt}`) não acompanha o horário editado.
 - **Totais do dia:** calculados somando só as refeições em `SUCCESS`. Não existe item agregado. O `GET /meals/{mealId}` devolve a refeição em qualquer status (é o endpoint de polling).
 
+### 3.5 Idioma
+
+- O `lambdaHttpAdapter` lê o `Accept-Language` e entrega `language` (`pt-BR` | `en-US`) ao controller. A primeira tag que começa com `en` vale `en-US`, com `pt` vale `pt-BR`; sem header ou com outro idioma, `pt-BR`. Versões do app sem o header continuam em português.
+- **Texto que a API gera para o usuário sai no idioma da requisição:** análise de refeição (foto, texto, áudio e item), sugestão de receita, e-mail de boas-vindas, e-mail de recuperação de senha e a unidade do item de receita registrada como refeição (`porção` / `serving`).
+- A IA recebe `Output language: ...` na mensagem do usuário e escreve nesse idioma mesmo quando a descrição está em outro. Os nomes das refeições por horário estão nos prompts nos dois idiomas.
+- A análise por foto e por áudio acontece depois, na fila, então a meal guarda o `language` da criação.
+- O e-mail de recuperação sai pelo Cognito: o idioma vai no `ClientMetadata` do `ForgotPassword` e chega ao trigger `CustomMessage`.
+- **Nada é traduzido depois de gravado.** Nomes de refeições, itens e receitas ficam no idioma em que foram gerados.
+- Mensagens de erro da API continuam técnicas e em inglês; o app traduz pelo `code`.
+
 ---
 
 ## 4. Autenticação
@@ -183,7 +194,7 @@ O sign-up acontece no fim do onboarding e recebe dados da conta e do perfil junt
 3. `SignUp` no Cognito → retorna o `sub`.
 4. Registra a compensação na Saga: `AuthProvider.deleteUser(sub)`.
 5. `PutItem` do PROFILE, com `externalId = sub` e `GSI1PK = COGNITO#{sub}`.
-6. Envio do e-mail de boas-vindas pelo `EmailSender`, fora da Saga. Uma falha no envio é logada e não desfaz o cadastro.
+6. Envio do e-mail de boas-vindas pelo `EmailSender`, no idioma da requisição, fora da Saga. Uma falha no envio é logada e não desfaz o cadastro.
 7. Sign-in e retorno dos tokens.
 
 Se o passo 5 falhar, a Saga remove o usuário do Cognito, evitando um usuário sem perfil. Como as metas estão embutidas no PROFILE, é uma gravação só e não precisa de UnitOfWork.
@@ -418,7 +429,7 @@ pictures/{userId}/{mealId}.jpg   # fotos de refeição (registro e/ou input de I
 - Máximo de **3 tentativas**, alinhado ao `maxReceiveCount: 3`. Erros de domínio (ex.: nenhum alimento identificado) vão direto para `FAILED`. Na última tentativa a meal vira `FAILED` e a mensagem é confirmada; a DLQ recebe só falhas inesperadas (mensagem malformada, queda da Lambda).
 - Se o `publish` falhar depois do `markAsQueued()`, um novo evento do S3 republica (o handler publica enquanto a meal estiver em `QUEUED`). O consumer só processa meals em `QUEUED`, o que descarta duplicatas.
 - A transcrição (`gpt-transcribe`) é salva em `inputText` antes da análise; numa nova tentativa, o áudio não é transcrito de novo.
-- A foto vai para a OpenAI por URL assinada (10 minutos, `detail: high`). Sem texto para detectar o idioma, os nomes saem em pt-BR.
+- A foto vai para a OpenAI por URL assinada (10 minutos, `detail: high`). Os nomes saem no `language` da meal.
 - **Reprocessamento:** `POST /meals/{mealId}/reprocess` aceita só meals por foto ou áudio em `FAILED` (`retry()`): volta para `QUEUED`, zera `attempts` (as 3 tentativas valem de novo), publica na fila e responde 202. A transcrição já salva em `inputText` é reaproveitada, então funciona mesmo depois que o áudio expirou em `inputs/`.
 - Lambda `processMeal` com timeout de 150 s (menor que o `VisibilityTimeout` de 180 s) e `batchSize: 1`.
 
@@ -449,7 +460,7 @@ O cliente reenvia a receita inteira. O risco de adulteração dos macros é acei
 - `POST /recipes/suggestions` recebe `{ date, text }`, com o texto livre do que o usuário tem em casa (até 1000 caracteres, ex.: "tenho metade de um queijo mussarela, uns 5 ovos..."), e devolve `{ recipe }`. A IA extrai os alimentos e trata as quantidades citadas como limite. O restante do dia é `meta - consumido` por macro, nunca abaixo de zero; o consumo considera só refeições em `SUCCESS`.
 - **Tamanho da receita:** quem decide é o usuário, no próprio texto ("monte uma receita com cerca de 400 kcal"). Sem pedido, a receita é uma porção normal de **no máximo ~500 kcal**; passa disso só se o usuário pedir. O restante do dia serve só para equilibrar os macros (ex.: priorizar proteína) e nunca reduz a porção.
 - A receita é sempre montada em volta dos alimentos citados; itens de despensa só temperam ou cozinham.
-- Pode usar itens básicos de despensa (sal, temperos, água, um pouco de óleo ou manteiga) além dos informados. Nome, ingredientes e passos saem no idioma do texto. `instructions` são passos numerados, um por linha.
+- Pode usar itens básicos de despensa (sal, temperos, água, um pouco de óleo ou manteiga) além dos informados. Nome, ingredientes e passos saem no idioma da requisição (seção 3.5). `instructions` são passos numerados, um por linha.
 - Nenhum alimento no texto → 422 `NO_FOOD_INGREDIENTS`. Resposta vazia do modelo → 502 `RECIPE_GENERATION_FAILED`.
 - Modelo `gpt-6-luna` com `reasoning.effort: low`; Lambda com timeout de 29 s, como a refeição manual.
 - `DELETE /recipes/{recipeId}` apaga a receita (404 se não existir, verificado pelo `ALL_OLD` do próprio `DeleteItem`).
@@ -465,7 +476,7 @@ Uma refeição salva é um modelo reutilizável: o usuário salva uma refeição
 - `GET /saved-meals` devolve `{ savedMeals }`, da mais nova para a mais antiga, cada uma com `id`, `name`, `items`, totais e `createdAt`.
 - `DELETE /saved-meals/{savedMealId}` apaga o modelo (404 `SAVED_MEAL_NOT_FOUND` se não existir, pelo `ALL_OLD`). As meals já cadastradas a partir dele continuam.
 - `POST /saved-meals/{savedMealId}/meal` com `{ date, time }` → `CreateMealFromSavedMealUseCase`: `savedMeal.toMeal()` cria uma meal `MANUAL` em `SUCCESS`, com o nome e os itens do modelo, sem `inputFileKey`, `inputText` nem `pictureKey` (a meal aceita foto de registro própria).
-- `POST /recipes/{recipeId}/meal` com `{ date, time }` → `CreateMealFromRecipeUseCase`: cria uma meal `MANUAL` em `SUCCESS` com o nome da receita e **um item** `1 porção`, com os macros da receita. Os ingredientes não têm macros individuais, então dividi-los inventaria números. Com um item só, os totais continuam derivados dos itens, e comer meia receita é editar a quantidade para `0,5`. Receita inexistente → 404 `RECIPE_NOT_FOUND`.
+- `POST /recipes/{recipeId}/meal` com `{ date, time }` → `CreateMealFromRecipeUseCase`: cria uma meal `MANUAL` em `SUCCESS` com o nome da receita e **um item** `1 porção` (`1 serving` em inglês), com os macros da receita. Os ingredientes não têm macros individuais, então dividi-los inventaria números. Com um item só, os totais continuam derivados dos itens, e comer meia receita é editar a quantidade para `0,5`. Receita inexistente → 404 `RECIPE_NOT_FOUND`.
 - As rotas que criam meal respondem 201 com a meal criada (`id`, `name`, `status`, `inputType`, `date`, `time`, `items`, totais, `createdAt`).
 - A exclusão da conta já cobre as refeições salvas, porque apaga todos os itens de `USER#{id}`.
 

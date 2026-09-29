@@ -17,4 +17,5 @@ The meal name is the type of meal, never a list of foods.
    - 15:00–18:29: afternoon snack ("Lanche da tarde")
    - 18:30–21:59: dinner ("Jantar")
    - 22:00–04:59: late-night snack ("Ceia")
+3. Write the meal type in the output language: the English names above for English, the names in parentheses for Brazilian Portuguese.
 `.trim();

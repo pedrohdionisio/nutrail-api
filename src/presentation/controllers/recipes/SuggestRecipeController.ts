@@ -24,11 +24,16 @@ export class SuggestRecipeController extends Controller<
   protected async handle({
     userId,
     body,
+    language,
   }: ControllerRequest<
     'private',
     SuggestRecipeBody
   >): Promise<ControllerResponse> {
-    const recipe = await this.suggestRecipe.execute({ userId, ...body });
+    const recipe = await this.suggestRecipe.execute({
+      userId,
+      ...body,
+      language,
+    });
 
     return { statusCode: 200, body: { recipe } };
   }

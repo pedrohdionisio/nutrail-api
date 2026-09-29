@@ -1,18 +1,25 @@
 import type { RecipeGenerator } from '@/application/ports/RecipeGenerator';
 import type { RecipeContent } from '@/domain/entities/Recipe';
 import type { Goal } from '@/domain/entities/User';
+import type { Language } from '@/domain/value-objects/Language';
 import type { Macros } from '@/domain/value-objects/Macros';
 import { buildRecipeContent } from '../fixtures/recipe';
 
 export class FakeRecipeGenerator implements RecipeGenerator {
   recipe: RecipeContent = buildRecipeContent();
   error: Error | null = null;
-  readonly calls: { text: string; goal: Goal; remaining: Macros }[] = [];
+  readonly calls: {
+    text: string;
+    goal: Goal;
+    remaining: Macros;
+    language: Language;
+  }[] = [];
 
   async generate(input: {
     text: string;
     goal: Goal;
     remaining: Macros;
+    language: Language;
   }): Promise<RecipeContent> {
     this.calls.push(input);
 

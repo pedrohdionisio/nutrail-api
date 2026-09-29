@@ -18,6 +18,7 @@ describe('CreateMealUseCase', () => {
       date: '2026-09-26',
       time: '12:30',
       inputType: 'PICTURE',
+      language: 'en-US',
     });
 
     expect(result).toEqual({
@@ -38,6 +39,7 @@ describe('CreateMealUseCase', () => {
       attempts: 0,
       date: '2026-09-26',
       time: '12:30',
+      language: 'en-US',
       createdAt: '2026-09-26T15:00:00.000Z',
     });
     expect(f.storage.uploads).toEqual([
@@ -56,6 +58,7 @@ describe('CreateMealUseCase', () => {
       date: '2026-09-26',
       time: '12:30',
       inputType: 'AUDIO',
+      language: 'pt-BR',
     });
 
     expect(f.db.meals.get('id-1')).toMatchObject({

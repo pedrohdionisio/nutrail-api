@@ -25,6 +25,7 @@ import type {
   AuthTokens,
   Credentials,
 } from '@/application/ports/AuthProvider';
+import type { Language } from '@/domain/value-objects/Language';
 import { Injectable } from '@/kernel/decorators/Injectable';
 import { AppConfig } from '@/shared/config/AppConfig';
 
@@ -99,12 +100,19 @@ export class CognitoAuthProvider implements AuthProvider {
     }
   }
 
-  async forgotPassword(email: string): Promise<void> {
+  async forgotPassword({
+    email,
+    language,
+  }: {
+    email: string;
+    language: Language;
+  }): Promise<void> {
     try {
       await this.client.send(
         new ForgotPasswordCommand({
           ClientId: this.config.cognito.clientId,
           Username: email,
+          ClientMetadata: { language },
         }),
       );
     } catch (error) {

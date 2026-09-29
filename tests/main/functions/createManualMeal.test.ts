@@ -37,8 +37,16 @@ describe('POST /meals/manual', () => {
       },
     });
     expect(fakes().analyzer.textCalls).toEqual([
-      { text: BODY.text, time: '12:30' },
+      { text: BODY.text, time: '12:30', language: 'pt-BR' },
     ]);
+  });
+
+  it('should analyze in English when the app asks for it', async () => {
+    const user = givenSignedInUser();
+
+    await invoke(handler, { as: user, body: BODY, acceptLanguage: 'en-US' });
+
+    expect(fakes().analyzer.textCalls[0]?.language).toBe('en-US');
   });
 
   it('should answer 422 when no food is identified', async () => {

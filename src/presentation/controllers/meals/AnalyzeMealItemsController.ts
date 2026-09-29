@@ -23,11 +23,15 @@ export class AnalyzeMealItemsController extends Controller<
 
   protected async handle({
     body,
+    language,
   }: ControllerRequest<
     'private',
     AnalyzeMealItemsBody
   >): Promise<ControllerResponse> {
-    const items = await this.analyzeMealItems.execute(body.text);
+    const items = await this.analyzeMealItems.execute({
+      text: body.text,
+      language,
+    });
 
     return { statusCode: 200, body: { items } };
   }

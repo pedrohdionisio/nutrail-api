@@ -37,6 +37,8 @@ what is left in the fridge.
 - **An asynchronous pipeline that survives failure.** Files go straight to S3 with a presigned POST;
   an EventBridge rule queues the meal on SQS; a consumer transcribes and analyzes it with retries, a
   dead-letter queue and a CloudWatch alarm. A failed meal can be reprocessed without re-uploading.
+- **Portuguese and English.** The app sends its language on every request, and the AI analysis,
+  the recipes and the e-mails come back in it, even when the user writes in the other language.
 - **Structured AI output.** Every OpenAI call uses Structured Outputs validated by a Zod schema, so
   a response is either a well-formed meal or a clean `502` the app can retry.
 - **Clean architecture with dependency inversion.** Use cases depend only on ports; DynamoDB, S3,
@@ -193,9 +195,11 @@ docs/
   ARCHITECTURE.md data model, flows, endpoints and decisions
 ```
 
-The product is built for the Brazilian market, so e-mails and the meals the AI names are in
-Portuguese by default. Error messages, identifiers and this README are in English; the app shows
-its own Portuguese message for each error code.
+The product speaks Portuguese and English. The app sends its language in `Accept-Language`, and
+everything the API writes for the user follows it: the foods and meal names the AI returns, recipes,
+e-mails and units. A picture or voice meal keeps the language it was created in, because it is
+analyzed later on the queue. Error messages, identifiers and this README are in English; the app
+shows its own message for each error code.
 
 ## Stack
 

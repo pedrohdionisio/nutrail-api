@@ -28,6 +28,7 @@ export class CreateMealFromRecipeController extends Controller<
     userId,
     params,
     body,
+    language,
   }: ControllerRequest<
     'private',
     CreateMealFromRecipeBody
@@ -40,6 +41,7 @@ export class CreateMealFromRecipeController extends Controller<
       userId,
       recipeId: params.recipeId,
       ...body,
+      language,
     });
 
     return {

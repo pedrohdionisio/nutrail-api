@@ -33,6 +33,7 @@ const ITEM = {
   attempts: 1,
   date: '2026-09-26',
   time: '12:30',
+  language: 'pt-BR',
   createdAt: '2026-09-26T15:30:00.000Z',
 };
 
@@ -83,6 +84,16 @@ describe('DynamoMealRepository', () => {
     const meal = await repository.findById('user-1', 'meal-1');
 
     expect(meal).toEqual(buildMeal());
+  });
+
+  it('should read a meal stored before languages existed as Portuguese', async () => {
+    const { mock, repository } = setup();
+    const { language: _, ...legacyItem } = ITEM;
+    mock.on(GetCommand).resolves({ Item: legacyItem });
+
+    const meal = await repository.findById('user-1', 'meal-1');
+
+    expect(meal?.language).toBe('pt-BR');
   });
 
   it('should return null when the meal does not exist', async () => {

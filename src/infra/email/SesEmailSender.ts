@@ -6,17 +6,20 @@ import type {
   EmailSender,
   EmailTemplates,
 } from '@/application/ports/EmailSender';
+import type { Language } from '@/domain/value-objects/Language';
 import { Injectable } from '@/kernel/decorators/Injectable';
 import { AppConfig } from '@/shared/config/AppConfig';
-import Welcome from './templates/Welcome';
+import Welcome, { welcomeSubject } from './templates/Welcome';
 
 const templates: {
   [T in keyof EmailTemplates]: {
-    subject: string;
-    component: (props: EmailTemplates[T]) => ReactElement;
+    subject: (language: Language) => string;
+    component: (
+      props: EmailTemplates[T] & { language: Language },
+    ) => ReactElement;
   };
 } = {
-  WELCOME: { subject: 'Bem-vindo ao Nutrail! 🥗', component: Welcome },
+  WELCOME: { subject: welcomeSubject, component: Welcome },
 };
 
 @Injectable()
@@ -30,9 +33,10 @@ export class SesEmailSender implements EmailSender {
     to,
     template,
     data,
+    language,
   }: EmailMessage<T>): Promise<void> {
     const { subject, component } = templates[template];
-    const element = createElement(component, data);
+    const element = createElement(component, { ...data, language });
 
     const [html, text] = await Promise.all([
       render(element),
@@ -45,7 +49,7 @@ export class SesEmailSender implements EmailSender {
         Destination: { ToAddresses: [to] },
         Content: {
           Simple: {
-            Subject: { Data: subject, Charset: 'UTF-8' },
+            Subject: { Data: subject(language), Charset: 'UTF-8' },
             Body: {
               Html: { Data: html, Charset: 'UTF-8' },
               Text: { Data: text, Charset: 'UTF-8' },

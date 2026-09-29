@@ -25,13 +25,17 @@ describe('ProcessMealUseCase', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
   });
 
-  it('should analyze the picture of a picture meal', async () => {
-    f.db.putMeal(buildPendingMeal({ status: 'QUEUED' }));
+  it('should analyze the picture of a picture meal in the language it was created in', async () => {
+    f.db.putMeal(buildPendingMeal({ status: 'QUEUED', language: 'en-US' }));
 
     await processMeal.execute(MESSAGE);
 
     expect(f.analyzer.imageCalls).toEqual([
-      { imageUrl: readUrlOf('pictures/user-1/meal-1.jpg'), time: '12:30' },
+      {
+        imageUrl: readUrlOf('pictures/user-1/meal-1.jpg'),
+        time: '12:30',
+        language: 'en-US',
+      },
     ]);
     expect(f.db.meals.get('meal-1')).toMatchObject({
       status: 'SUCCESS',
@@ -56,7 +60,7 @@ describe('ProcessMealUseCase', () => {
       readUrlOf('inputs/user-1/meal-1.m4a'),
     ]);
     expect(f.analyzer.textCalls).toEqual([
-      { text: f.transcriber.text, time: '12:30' },
+      { text: f.transcriber.text, time: '12:30', language: 'pt-BR' },
     ]);
     expect(f.db.meals.get('meal-1')).toMatchObject({
       status: 'SUCCESS',

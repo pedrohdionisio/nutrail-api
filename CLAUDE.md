@@ -112,7 +112,11 @@ sls/
 9. **Exclusão apaga os arquivos antes do item** (meal e conta), para que uma falha no meio possa ser
    repetida pelo próprio usuário e nunca deixe arquivo órfão.
 10. **O `code` do erro e os campos de resposta são contrato.** O app traduz cada `code` para
-    português e lê os campos pelo nome. Renomear ou remover exige conferir o `../nutrail-app`.
+    português e inglês e lê os campos pelo nome. Renomear ou remover exige conferir o `../nutrail-app`.
+
+11. **Texto gerado para o usuário segue o idioma da requisição** (`request.language`, do
+    `Accept-Language`): IA, e-mails e unidades. A meal guarda o `language` para a análise
+    assíncrona, e nada é traduzido depois de gravado.
 
 ## Fora de escopo por enquanto
 

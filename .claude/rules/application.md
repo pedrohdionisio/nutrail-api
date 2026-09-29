@@ -61,5 +61,6 @@ paths:
 - Falha de um provedor externo que o usuário pode repetir é 502 (`MEAL_ANALYSIS_FAILED`,
   `RECIPE_GENERATION_FAILED`). Senha atual errada é 400 `INVALID_CURRENT_PASSWORD`, nunca 401: o
   app trata 401 como sessão expirada.
-- `code` novo é contrato: o app precisa de uma mensagem em português para ele em
+- `code` novo é contrato: o app precisa de uma mensagem em português e em inglês para ele nos
+  dicionários de
   `../nutrail-app/src/data/config/apiError.ts`.

@@ -7,6 +7,10 @@ import { ZodError } from 'zod';
 import { ApplicationError } from '@/application/errors/ApplicationError';
 import { UserIdResolver } from '@/application/ports/UserIdResolver';
 import { DomainError } from '@/domain/errors/DomainError';
+import {
+  DEFAULT_LANGUAGE,
+  type Language,
+} from '@/domain/value-objects/Language';
 import type { Token } from '@/kernel/di/Container';
 import type { Controller } from '@/presentation/controllers/Controller';
 import { HttpError } from '@/presentation/errors/HttpError';
@@ -30,6 +34,7 @@ export function lambdaHttpAdapter(
         body: parseBody(event),
         params: event.pathParameters ?? {},
         queryParams: event.queryStringParameters ?? {},
+        language: resolveLanguage(event.headers?.['accept-language']),
         ...(userId !== undefined && { userId }),
       });
 
@@ -55,6 +60,20 @@ async function resolveUserId(event: HttpEvent): Promise<string | undefined> {
   }
 
   return userId;
+}
+
+function resolveLanguage(header: string | undefined): Language {
+  const tags = (header ?? '')
+    .split(',')
+    .map((part) => part.split(';')[0]?.trim().toLowerCase() ?? '');
+
+  for (const tag of tags) {
+    if (tag.startsWith('en')) return 'en-US';
+
+    if (tag.startsWith('pt')) return 'pt-BR';
+  }
+
+  return DEFAULT_LANGUAGE;
 }
 
 function parseBody(event: HttpEvent): unknown {

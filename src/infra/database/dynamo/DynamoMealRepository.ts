@@ -6,6 +6,7 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import type { MealRepository } from '@/application/ports/MealRepository';
 import { Meal } from '@/domain/entities/Meal';
+import { DEFAULT_LANGUAGE } from '@/domain/value-objects/Language';
 import { Injectable } from '@/kernel/decorators/Injectable';
 import { AppConfig } from '@/shared/config/AppConfig';
 
@@ -39,6 +40,7 @@ export class DynamoMealRepository implements MealRepository {
       attempts: Item.attempts,
       date: Item.date,
       time: Item.time,
+      language: Item.language ?? DEFAULT_LANGUAGE,
       createdAt: Item.createdAt,
     });
   }
@@ -81,6 +83,7 @@ export class DynamoMealRepository implements MealRepository {
           attempts: meal.attempts,
           date: meal.date,
           time: meal.time,
+          language: meal.language,
           createdAt: meal.createdAt,
         },
         ConditionExpression: condition,

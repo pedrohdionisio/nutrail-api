@@ -18,6 +18,7 @@ describe('SavedMeal', () => {
       id: 'meal-9',
       date: '2026-09-27',
       time: '12:00',
+      language: 'en-US',
       createdAt: '2026-09-27T15:00:00.000Z',
     });
 
@@ -33,6 +34,7 @@ describe('SavedMeal', () => {
       attempts: 0,
       date: '2026-09-27',
       time: '12:00',
+      language: 'en-US',
       createdAt: '2026-09-27T15:00:00.000Z',
     });
     expect(meal.items).toEqual(savedMeal.items);

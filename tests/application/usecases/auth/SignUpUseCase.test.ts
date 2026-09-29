@@ -29,6 +29,7 @@ describe('SignUpUseCase', () => {
     const tokens = await signUp.execute({
       account: ACCOUNT,
       profile: buildProfile(),
+      language: 'pt-BR',
     });
 
     expect(tokens).toEqual({
@@ -45,14 +46,19 @@ describe('SignUpUseCase', () => {
     });
   });
 
-  it('should send the welcome email', async () => {
-    await signUp.execute({ account: ACCOUNT, profile: buildProfile() });
+  it('should send the welcome email in the language of the sign-up', async () => {
+    await signUp.execute({
+      account: ACCOUNT,
+      profile: buildProfile(),
+      language: 'en-US',
+    });
 
     expect(f.emails.sent).toEqual([
       {
         to: 'ana@nutrail.test',
         template: 'WELCOME',
         data: { name: 'Ana Souza' },
+        language: 'en-US',
       },
     ]);
   });
@@ -62,7 +68,11 @@ describe('SignUpUseCase', () => {
     f.emails.error = new Error('SES is down');
 
     await expect(
-      signUp.execute({ account: ACCOUNT, profile: buildProfile() }),
+      signUp.execute({
+        account: ACCOUNT,
+        profile: buildProfile(),
+        language: 'pt-BR',
+      }),
     ).resolves.toEqual({
       accessToken: 'access-sub-new-1',
       refreshToken: 'refresh-sub-new-1',
@@ -75,7 +85,11 @@ describe('SignUpUseCase', () => {
     );
 
     await expect(
-      signUp.execute({ account: ACCOUNT, profile: buildProfile() }),
+      signUp.execute({
+        account: ACCOUNT,
+        profile: buildProfile(),
+        language: 'pt-BR',
+      }),
     ).rejects.toThrow('DynamoDB is down');
     expect(f.auth.deletedExternalIds).toEqual(['sub-new-1']);
     expect(f.auth.accounts.size).toBe(0);
@@ -90,7 +104,11 @@ describe('SignUpUseCase', () => {
     });
 
     await expect(
-      signUp.execute({ account: ACCOUNT, profile: buildProfile() }),
+      signUp.execute({
+        account: ACCOUNT,
+        profile: buildProfile(),
+        language: 'pt-BR',
+      }),
     ).rejects.toThrow(EmailAlreadyInUseError);
     expect(f.db.users.size).toBe(0);
   });

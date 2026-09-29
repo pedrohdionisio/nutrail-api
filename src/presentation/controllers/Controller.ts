@@ -1,3 +1,4 @@
+import type { Language } from '@/domain/value-objects/Language';
 import { getSchema } from '@/kernel/decorators/Schema';
 
 export type Access = 'public' | 'private';
@@ -6,6 +7,7 @@ export type ControllerRequest<TAccess extends Access, TBody = unknown> = {
   body: TBody;
   params: Record<string, string | undefined>;
   queryParams: Record<string, string | undefined>;
+  language: Language;
 } & (TAccess extends 'private' ? { userId: string } : Record<never, never>);
 
 export type ControllerResponse = {

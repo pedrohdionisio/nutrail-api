@@ -11,12 +11,15 @@ describe('AnalyzeMealItemsUseCase', () => {
       buildMealItem({ name: 'Azeite', quantity: 2, unit: 'colheres de sopa' }),
     ];
 
-    const items = await new AnalyzeMealItemsUseCase(f.analyzer).execute(
-      '2 colheres de azeite',
-    );
+    const items = await new AnalyzeMealItemsUseCase(f.analyzer).execute({
+      text: '2 colheres de azeite',
+      language: 'en-US',
+    });
 
     expect(items).toEqual(f.analyzer.items);
-    expect(f.analyzer.itemsCalls).toEqual(['2 colheres de azeite']);
+    expect(f.analyzer.itemsCalls).toEqual([
+      { text: '2 colheres de azeite', language: 'en-US' },
+    ]);
   });
 
   it('should refuse a text without food', async () => {
@@ -24,7 +27,10 @@ describe('AnalyzeMealItemsUseCase', () => {
     f.analyzer.items = [];
 
     await expect(
-      new AnalyzeMealItemsUseCase(f.analyzer).execute('uma cadeira'),
+      new AnalyzeMealItemsUseCase(f.analyzer).execute({
+        text: 'uma cadeira',
+        language: 'pt-BR',
+      }),
     ).rejects.toThrow(MealWithoutItemsError);
   });
 });

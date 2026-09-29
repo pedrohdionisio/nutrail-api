@@ -194,17 +194,21 @@ describe('CognitoAuthProvider', () => {
   });
 
   describe('forgotPassword', () => {
-    it('should ask Cognito to send the code', async () => {
+    it('should ask Cognito to send the code, passing the language to the e-mail trigger', async () => {
       const { mock, auth } = setup();
       mock.on(ForgotPasswordCommand).resolves({});
 
-      await auth.forgotPassword('ana@nutrail.test');
+      await auth.forgotPassword({
+        email: 'ana@nutrail.test',
+        language: 'en-US',
+      });
 
       expect(
         mock.commandCalls(ForgotPasswordCommand)[0]?.args[0].input,
       ).toEqual({
         ClientId: CLIENT,
         Username: 'ana@nutrail.test',
+        ClientMetadata: { language: 'en-US' },
       });
     });
 
@@ -212,9 +216,9 @@ describe('CognitoAuthProvider', () => {
       const { mock, auth } = setup();
       mock.on(ForgotPasswordCommand).rejects(new LimitExceededException(META));
 
-      await expect(auth.forgotPassword('ana@nutrail.test')).rejects.toThrow(
-        TooManyAttemptsError,
-      );
+      await expect(
+        auth.forgotPassword({ email: 'ana@nutrail.test', language: 'pt-BR' }),
+      ).rejects.toThrow(TooManyAttemptsError);
     });
   });
 

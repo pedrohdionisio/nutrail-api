@@ -62,7 +62,9 @@ instanciar client nem exportar singleton de módulo aqui. Nomes de tabela, bucke
   novo entra no tipo `EmailTemplates` do port e no mapa de templates. Preview com `pnpm dev:email`.
 - O e-mail de recuperação de senha sai pelo Cognito, com o conteúdo do trigger `customMessage`
   renderizando `ForgotPassword`.
-- Textos de e-mail são em português, para o usuário final.
+- Todo template existe nos dois idiomas: um objeto `COPY` por `Language` no próprio arquivo, com o
+  assunto exportado (`welcomeSubject`). O idioma chega na mensagem do port; no trigger do Cognito,
+  pelo `clientMetadata.language`.
 
 ## OpenAI (`infra/ai/`)
 
@@ -73,6 +75,9 @@ instanciar client nem exportar singleton de módulo aqui. Nomes de tabela, bucke
   caso (`MealAnalysisFailedError`, `RecipeGenerationFailedError`).
 - O adapter normaliza a saída antes de devolver: calorias inteiras, macros com uma casa decimal.
 - Prompts ficam em `prompts/`, um por arquivo, com as regras compartilhadas em `mealAnalysisRules.ts`.
-  O prompt decide idioma e formato; o schema Zod da resposta decide a forma.
+  O prompt decide formato; o schema Zod da resposta decide a forma.
+- O idioma da saída vem do port (`language`) e entra na mensagem do usuário como
+  `outputLanguage(language)`. O prompt manda escrever nesse idioma mesmo quando a entrada está em
+  outro; nunca "no idioma do texto".
 - Foto vai para o modelo por URL assinada, nunca por base64. O áudio é baixado da URL assinada e
   enviado como arquivo para a transcrição.

@@ -6,8 +6,13 @@ describe('ForgotPasswordUseCase', () => {
   it('should ask the auth provider to send the reset code', async () => {
     const f = createFakes();
 
-    await new ForgotPasswordUseCase(f.auth).execute('ana@nutrail.test');
+    await new ForgotPasswordUseCase(f.auth).execute({
+      email: 'ana@nutrail.test',
+      language: 'en-US',
+    });
 
-    expect(f.auth.resetRequests).toEqual(['ana@nutrail.test']);
+    expect(f.auth.resetRequests).toEqual([
+      { email: 'ana@nutrail.test', language: 'en-US' },
+    ]);
   });
 });

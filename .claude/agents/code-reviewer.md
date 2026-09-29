@@ -26,8 +26,8 @@ Você revisa uma mudança na Nutrail API com olhos novos. Não edita arquivos; r
      linha, comentário de código.
    - **Contrato** — para cada rota, campo de resposta, status ou `code` que mudou, procure em
      `../nutrail-app/src` (services em `data/modules/*/services`, `data/config/apiError.ts`, schemas
-     de formulário) e nomeie os arquivos que quebram. `code` novo sem mensagem no
-     `API_ERROR_MESSAGES` do app é achado.
+     de formulário) e nomeie os arquivos que quebram. `code` novo sem mensagem em
+     `errors` nos dicionários do app (`data/config/locales`) é achado.
    - **Testes** — cada critério de aceite tem um teste que falharia sem a mudança?
    - **Docs** — `docs/ARCHITECTURE.md` (modelagem, fluxos, tabela de endpoints) continua verdadeiro.
 3. Confirme cada achado antes de relatar: cite a linha e descreva a entrada que produz o

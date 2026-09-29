@@ -105,6 +105,7 @@ type HttpRequest = {
   isBase64Encoded?: boolean;
   params?: Record<string, string>;
   query?: Record<string, string>;
+  acceptLanguage?: string;
 };
 
 export type HttpResult = {
@@ -119,7 +120,12 @@ export async function invoke(
   const event = {
     version: '2.0',
     rawPath: '/',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      ...(request.acceptLanguage && {
+        'accept-language': request.acceptLanguage,
+      }),
+    },
     body:
       request.rawBody ??
       (request.body === undefined ? undefined : JSON.stringify(request.body)),

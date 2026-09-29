@@ -1,18 +1,24 @@
 import type { MealAnalyzer } from '@/application/ports/MealAnalyzer';
 import type { MealAnalysis, MealItem } from '@/domain/entities/Meal';
+import type { Language } from '@/domain/value-objects/Language';
 import { buildMealAnalysis } from '../fixtures/meal';
 
 export class FakeMealAnalyzer implements MealAnalyzer {
   analysis: MealAnalysis = buildMealAnalysis();
   items: MealItem[] = buildMealAnalysis().items;
   error: Error | null = null;
-  readonly textCalls: { text: string; time: string }[] = [];
-  readonly imageCalls: { imageUrl: string; time: string }[] = [];
-  readonly itemsCalls: string[] = [];
+  readonly textCalls: { text: string; time: string; language: Language }[] = [];
+  readonly imageCalls: {
+    imageUrl: string;
+    time: string;
+    language: Language;
+  }[] = [];
+  readonly itemsCalls: { text: string; language: Language }[] = [];
 
   async analyzeText(input: {
     text: string;
     time: string;
+    language: Language;
   }): Promise<MealAnalysis> {
     this.textCalls.push(input);
 
@@ -22,14 +28,18 @@ export class FakeMealAnalyzer implements MealAnalyzer {
   async analyzeImage(input: {
     imageUrl: string;
     time: string;
+    language: Language;
   }): Promise<MealAnalysis> {
     this.imageCalls.push(input);
 
     return this.respond(this.analysis);
   }
 
-  async analyzeItems(text: string): Promise<MealItem[]> {
-    this.itemsCalls.push(text);
+  async analyzeItems(input: {
+    text: string;
+    language: Language;
+  }): Promise<MealItem[]> {
+    this.itemsCalls.push(input);
 
     return this.respond(this.items);
   }

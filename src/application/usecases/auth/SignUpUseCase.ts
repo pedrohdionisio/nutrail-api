@@ -10,11 +10,13 @@ import { UserRepository } from '@/application/ports/UserRepository';
 import { Saga } from '@/application/services/Saga';
 import { User, type UserProfile } from '@/domain/entities/User';
 import { GoalCalculator } from '@/domain/services/GoalCalculator';
+import type { Language } from '@/domain/value-objects/Language';
 import { Injectable } from '@/kernel/decorators/Injectable';
 
 type Input = {
   account: Credentials;
   profile: UserProfile;
+  language: Language;
 };
 
 @Injectable()
@@ -29,7 +31,7 @@ export class SignUpUseCase {
     private readonly emails: EmailSender,
   ) {}
 
-  async execute({ account, profile }: Input): Promise<AuthTokens> {
+  async execute({ account, profile, language }: Input): Promise<AuthTokens> {
     const now = this.clock.now();
     const goals = this.goalCalculator.calculate(profile, now);
     const id = this.ids.generate();
@@ -50,14 +52,23 @@ export class SignUpUseCase {
       );
     });
 
-    await this.sendWelcomeEmail(account.email, profile.name);
+    await this.sendWelcomeEmail(account.email, profile.name, language);
 
     return this.auth.signIn(account);
   }
 
-  private async sendWelcomeEmail(to: string, name: string): Promise<void> {
+  private async sendWelcomeEmail(
+    to: string,
+    name: string,
+    language: Language,
+  ): Promise<void> {
     try {
-      await this.emails.send({ to, template: 'WELCOME', data: { name } });
+      await this.emails.send({
+        to,
+        template: 'WELCOME',
+        data: { name },
+        language,
+      });
     } catch (error) {
       console.error('Failed to send welcome email.', error);
     }

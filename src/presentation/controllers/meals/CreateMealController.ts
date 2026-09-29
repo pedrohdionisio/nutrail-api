@@ -24,11 +24,12 @@ export class CreateMealController extends Controller<
   protected async handle({
     userId,
     body,
+    language,
   }: ControllerRequest<
     'private',
     CreateMealBody
   >): Promise<ControllerResponse> {
-    const result = await this.createMeal.execute({ userId, ...body });
+    const result = await this.createMeal.execute({ userId, ...body, language });
 
     return { statusCode: 201, body: result };
   }

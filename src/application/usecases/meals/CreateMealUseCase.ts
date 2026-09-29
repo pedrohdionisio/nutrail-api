@@ -12,6 +12,7 @@ import {
   mealFileKey,
 } from '@/application/services/mealFiles';
 import { Meal } from '@/domain/entities/Meal';
+import type { Language } from '@/domain/value-objects/Language';
 import { Injectable } from '@/kernel/decorators/Injectable';
 
 type Input = {
@@ -19,6 +20,7 @@ type Input = {
   date: string;
   time: string;
   inputType: MealFileType;
+  language: Language;
 };
 
 type Output = {
@@ -35,7 +37,13 @@ export class CreateMealUseCase {
     private readonly clock: Clock,
   ) {}
 
-  async execute({ userId, date, time, inputType }: Input): Promise<Output> {
+  async execute({
+    userId,
+    date,
+    time,
+    inputType,
+    language,
+  }: Input): Promise<Output> {
     const mealId = this.ids.generate();
     const fileKey = mealFileKey(inputType, userId, mealId);
 
@@ -53,6 +61,7 @@ export class CreateMealUseCase {
         attempts: 0,
         date,
         time,
+        language,
         createdAt: this.clock.now().toISOString(),
       }),
     );

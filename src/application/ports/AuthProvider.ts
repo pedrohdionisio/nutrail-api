@@ -1,3 +1,5 @@
+import type { Language } from '@/domain/value-objects/Language';
+
 export type AuthTokens = {
   accessToken: string;
   refreshToken: string;
@@ -15,7 +17,10 @@ export abstract class AuthProvider {
 
   abstract refreshToken(refreshToken: string): Promise<AuthTokens>;
 
-  abstract forgotPassword(email: string): Promise<void>;
+  abstract forgotPassword(input: {
+    email: string;
+    language: Language;
+  }): Promise<void>;
 
   abstract confirmForgotPassword(input: {
     email: string;

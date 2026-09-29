@@ -4,6 +4,7 @@ import { GetProfileQuery } from '@/application/ports/GetProfileQuery';
 import { ListMealsByDayQuery } from '@/application/ports/ListMealsByDayQuery';
 import { RecipeGenerator } from '@/application/ports/RecipeGenerator';
 import type { RecipeContent } from '@/domain/entities/Recipe';
+import type { Language } from '@/domain/value-objects/Language';
 import type { Macros } from '@/domain/value-objects/Macros';
 import { Injectable } from '@/kernel/decorators/Injectable';
 
@@ -11,6 +12,7 @@ type Input = {
   userId: string;
   date: string;
   text: string;
+  language: Language;
 };
 
 @Injectable()
@@ -21,7 +23,12 @@ export class SuggestRecipeUseCase {
     private readonly generator: RecipeGenerator,
   ) {}
 
-  async execute({ userId, date, text }: Input): Promise<RecipeContent> {
+  async execute({
+    userId,
+    date,
+    text,
+    language,
+  }: Input): Promise<RecipeContent> {
     const [me, day] = await Promise.all([
       this.getProfile.execute(userId),
       this.listMealsByDay.execute({ userId, date }),
@@ -35,6 +42,7 @@ export class SuggestRecipeUseCase {
       text,
       goal: me.profile.goal,
       remaining: remainingOf(me.goals, day.totals),
+      language,
     });
 
     if (recipe.ingredients.length === 0) {

@@ -5,10 +5,12 @@ import { z } from 'zod';
 import { MealAnalysisFailedError } from '@/application/errors/MealAnalysisFailedError';
 import type { MealAnalyzer } from '@/application/ports/MealAnalyzer';
 import type { MealAnalysis, MealItem } from '@/domain/entities/Meal';
+import type { Language } from '@/domain/value-objects/Language';
 import { Injectable } from '@/kernel/decorators/Injectable';
 import { analyzeMealImagePrompt } from './prompts/analyzeMealImagePrompt';
 import { analyzeMealItemsPrompt } from './prompts/analyzeMealItemsPrompt';
 import { analyzeMealTextPrompt } from './prompts/analyzeMealTextPrompt';
+import { outputLanguage } from './prompts/outputLanguage';
 
 const MODEL = 'gpt-6-luna';
 
@@ -34,15 +36,17 @@ export class OpenAIMealAnalyzer implements MealAnalyzer {
   analyzeText({
     text,
     time,
+    language,
   }: {
     text: string;
     time: string;
+    language: Language;
   }): Promise<MealAnalysis> {
     return this.analyze([
       { role: 'system', content: analyzeMealTextPrompt },
       {
         role: 'user',
-        content: `Local time: ${time}\n\nMeal description:\n${text}`,
+        content: `${outputLanguage(language)}\nLocal time: ${time}\n\nMeal description:\n${text}`,
       },
     ]);
   }
@@ -50,26 +54,37 @@ export class OpenAIMealAnalyzer implements MealAnalyzer {
   analyzeImage({
     imageUrl,
     time,
+    language,
   }: {
     imageUrl: string;
     time: string;
+    language: Language;
   }): Promise<MealAnalysis> {
     return this.analyze([
       { role: 'system', content: analyzeMealImagePrompt },
       {
         role: 'user',
         content: [
-          { type: 'input_text', text: `Local time: ${time}` },
+          {
+            type: 'input_text',
+            text: `${outputLanguage(language)}\nLocal time: ${time}`,
+          },
           { type: 'input_image', image_url: imageUrl, detail: 'high' },
         ],
       },
     ]);
   }
 
-  async analyzeItems(text: string): Promise<MealItem[]> {
+  async analyzeItems({
+    text,
+    language,
+  }: {
+    text: string;
+    language: Language;
+  }): Promise<MealItem[]> {
     const { items } = await this.analyze([
       { role: 'system', content: analyzeMealItemsPrompt },
-      { role: 'user', content: text },
+      { role: 'user', content: `${outputLanguage(language)}\n\n${text}` },
     ]);
 
     return items;

@@ -44,6 +44,7 @@ export function copyMeal(meal: Meal): Meal {
     attempts: meal.attempts,
     date: meal.date,
     time: meal.time,
+    language: meal.language,
     createdAt: meal.createdAt,
   });
 }

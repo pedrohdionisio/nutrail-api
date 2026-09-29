@@ -26,6 +26,7 @@ describe('CreateMealFromSavedMealUseCase', () => {
       savedMealId: 'saved-1',
       date: '2026-09-26',
       time: '12:00',
+      language: 'pt-BR',
     });
 
     expect(meal).toMatchObject({
@@ -49,6 +50,7 @@ describe('CreateMealFromSavedMealUseCase', () => {
         savedMealId: 'saved-1',
         date: '2026-09-26',
         time: '12:00',
+        language: 'pt-BR',
       }),
     ).rejects.toThrow(SavedMealNotFoundError);
   });

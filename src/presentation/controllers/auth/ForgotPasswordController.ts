@@ -23,11 +23,12 @@ export class ForgotPasswordController extends Controller<
 
   protected async handle({
     body,
+    language,
   }: ControllerRequest<
     'public',
     ForgotPasswordBody
   >): Promise<ControllerResponse> {
-    await this.forgotPassword.execute(body.email);
+    await this.forgotPassword.execute({ email: body.email, language });
 
     return { statusCode: 204 };
   }

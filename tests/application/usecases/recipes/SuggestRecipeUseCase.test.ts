@@ -48,6 +48,7 @@ describe('SuggestRecipeUseCase', () => {
       userId: 'user-1',
       date: '2026-09-26',
       text: 'tenho ovos e queijo',
+      language: 'en-US',
     });
 
     expect(recipe).toEqual(buildRecipeContent());
@@ -61,6 +62,7 @@ describe('SuggestRecipeUseCase', () => {
           carbohydrate: 150,
           fat: 40,
         },
+        language: 'en-US',
       },
     ]);
   });
@@ -85,6 +87,7 @@ describe('SuggestRecipeUseCase', () => {
       userId: 'user-1',
       date: '2026-09-26',
       text: 'ovos',
+      language: 'pt-BR',
     });
 
     expect(f.recipeGenerator.calls[0]?.remaining).toEqual({
@@ -103,6 +106,7 @@ describe('SuggestRecipeUseCase', () => {
         userId: 'user-1',
         date: '2026-09-26',
         text: 'uma cadeira',
+        language: 'pt-BR',
       }),
     ).rejects.toThrow(NoFoodIngredientsError);
   });
@@ -113,6 +117,7 @@ describe('SuggestRecipeUseCase', () => {
         userId: 'nobody',
         date: '2026-09-26',
         text: 'ovos',
+        language: 'pt-BR',
       }),
     ).rejects.toThrow(UserNotFoundError);
     expect(f.recipeGenerator.calls).toEqual([]);

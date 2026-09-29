@@ -32,6 +32,7 @@ describe('POST /recipes/suggestions', () => {
           carbohydrate: 170,
           fat: 48.3,
         },
+        language: 'pt-BR',
       },
     ]);
     expect(fakes().db.recipes.size).toBe(0);

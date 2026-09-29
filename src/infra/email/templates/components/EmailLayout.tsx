@@ -8,15 +8,17 @@ import {
   pixelBasedPreset,
   Tailwind,
 } from 'react-email';
+import type { Language } from '@/domain/value-objects/Language';
 
 type EmailLayoutProps = {
+  language: Language;
   preview: string;
   children: ReactNode;
 };
 
-export function EmailLayout({ preview, children }: EmailLayoutProps) {
+export function EmailLayout({ language, preview, children }: EmailLayoutProps) {
   return (
-    <Html lang="pt-BR">
+    <Html lang={language}>
       <Tailwind
         config={{
           presets: [pixelBasedPreset],

@@ -5,8 +5,10 @@ import { RecipeGenerationFailedError } from '@/application/errors/RecipeGenerati
 import type { RecipeGenerator } from '@/application/ports/RecipeGenerator';
 import type { RecipeContent } from '@/domain/entities/Recipe';
 import type { Goal } from '@/domain/entities/User';
+import type { Language } from '@/domain/value-objects/Language';
 import type { Macros } from '@/domain/value-objects/Macros';
 import { Injectable } from '@/kernel/decorators/Injectable';
+import { outputLanguage } from './prompts/outputLanguage';
 import { suggestRecipePrompt } from './prompts/suggestRecipePrompt';
 
 const MODEL = 'gpt-6-luna';
@@ -35,10 +37,12 @@ export class OpenAIRecipeGenerator implements RecipeGenerator {
     text,
     goal,
     remaining,
+    language,
   }: {
     text: string;
     goal: Goal;
     remaining: Macros;
+    language: Language;
   }): Promise<RecipeContent> {
     const response = await this.client.responses.parse({
       model: MODEL,
@@ -48,6 +52,7 @@ export class OpenAIRecipeGenerator implements RecipeGenerator {
         {
           role: 'user',
           content: [
+            outputLanguage(language),
             `Goal: ${goal}`,
             `Left for today: ${describe(remaining)}`,
             '',
