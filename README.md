@@ -150,6 +150,9 @@ aws ssm put-parameter --type SecureString \
 pnpm run deploy         # stage dev; pnpm run deploy --stage prod for production
 ```
 
+- Account-wide resources, like the SES identity for `nutrail.app`, exist only in the `prod` stack.
+  After the first `prod` deploy, its outputs list the DKIM records to add to the DNS.
+
 - The OpenAI key is read at runtime from the SSM `SecureString` `/nutrail-api/{stage}/openai-api-key`,
   never from the function configuration. Rotating it is `put-parameter --overwrite`; new Lambda
   instances pick it up.

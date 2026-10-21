@@ -421,6 +421,19 @@ A IA é o único custo que cresce com o uso, então o acesso a ela tem limite.
   - O dia é o UTC, e não o local do app: a data do cliente não é confiável para limitar custo, e virar o dia às 21h no Brasil não importa para uma cota.
   - O item tem `ttl` de 2 dias e some sozinho pelo TTL da tabela. A exclusão da conta também o apaga, porque está na partição `USER#{id}`.
 
+### 5.9 Domínio e e-mail
+
+O domínio é `nutrail.app` (`custom.domain` no `serverless.yml`), com o DNS na Vercel, onde os registros são criados à mão.
+
+- **Recursos da conta, não do stage, ficam só em `prod`**, pela condição `IsProd`. A identity do SES é única por conta e região; se estivesse nas duas stacks, o deploy da segunda falharia. Ela tem `DeletionPolicy: Retain`, para remover a stack não derrubar o envio de e-mail.
+- **Identity `nutrail.app`** (`sls/resources/ses.yml`): Easy DKIM com chave RSA de 2048 bits e MAIL FROM em `mail.nutrail.app`, para o SPF alinhar com o domínio do remetente em vez de `amazonses.com`. Os três CNAMEs de DKIM saem como outputs da stack `prod` (`EmailDkimRecord1..3`).
+- **DNS**, além dos CNAMEs de DKIM:
+  - `mail.nutrail.app` MX `10 feedback-smtp.us-east-1.amazonses.com`;
+  - `mail.nutrail.app` TXT `v=spf1 include:amazonses.com ~all`;
+  - `_dmarc.nutrail.app` TXT `v=DMARC1; p=quarantine`. Sem `rua`, porque o domínio não recebe e-mail.
+- **Sandbox:** a conta começa no sandbox do SES (só envia para endereços verificados, 200 por dia). A saída é pedida uma vez no console, depois da identity verificada.
+- **Remetente:** o `EMAIL_FROM` e o Cognito só passam para `no-reply@nutrail.app` depois que a identity estiver verificada: o Cognito recusa uma identity não verificada, e o deploy falharia.
+
 ---
 
 ## 6. Armazenamento de arquivos (S3)

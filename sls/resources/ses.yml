@@ -1,0 +1,27 @@
+Conditions:
+  IsProd: !Equals ['${sls:stage}', 'prod']
+
+Resources:
+  EmailIdentity:
+    Type: AWS::SES::EmailIdentity
+    Condition: IsProd
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      EmailIdentity: ${self:custom.domain}
+      DkimSigningAttributes:
+        NextSigningKeyLength: RSA_2048_BIT
+      MailFromAttributes:
+        MailFromDomain: mail.${self:custom.domain}
+        BehaviorOnMxFailure: USE_DEFAULT_VALUE
+
+Outputs:
+  EmailDkimRecord1:
+    Condition: IsProd
+    Value: !Join [' ', [!GetAtt EmailIdentity.DkimDNSTokenName1, CNAME, !GetAtt EmailIdentity.DkimDNSTokenValue1]]
+  EmailDkimRecord2:
+    Condition: IsProd
+    Value: !Join [' ', [!GetAtt EmailIdentity.DkimDNSTokenName2, CNAME, !GetAtt EmailIdentity.DkimDNSTokenValue2]]
+  EmailDkimRecord3:
+    Condition: IsProd
+    Value: !Join [' ', [!GetAtt EmailIdentity.DkimDNSTokenName3, CNAME, !GetAtt EmailIdentity.DkimDNSTokenValue3]]

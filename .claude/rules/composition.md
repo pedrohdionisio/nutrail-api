@@ -56,6 +56,9 @@ paths:
   estoura o limite de 250 MB da Lambda.
 - Permissão nova vai em `provider.iam.role.statements`, com a ação mínima e o recurso específico.
 - Só recursos pay-per-use, com nome carregando `${sls:stage}` quando nomeados. Nada sempre ligado.
+- Recurso único por conta (identity do SES, e depois o certificado e o domínio da API) leva
+  `Condition: IsProd` (definida em `sls/resources/ses.yml`) e só existe na stack `prod`. O domínio
+  vem de `custom.domain`.
 - O stage do HTTP API (`HttpApiStage`, gerado pelo Serverless) é ajustado em
   `sls/resources/httpApi.yml` por `extensions`: throttling de 10 rps com burst de 20 para todas as
   rotas. Cada chave das `Properties` da extensão substitui a gerada inteira, então

@@ -2,6 +2,7 @@ service: nutrail-api
 frameworkVersion: '4'
 
 custom:
+  domain: nutrail.app
   openaiApiKeyParameter: /${self:service}/${sls:stage}/openai-api-key
 
 provider:
@@ -123,3 +124,4 @@ resources:
   - ${file(sls/resources/cognito.yml)}
   - ${file(sls/resources/monitoring.yml)}
   - ${file(sls/resources/httpApi.yml)}
+  - ${file(sls/resources/ses.yml)}
