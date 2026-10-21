@@ -45,6 +45,9 @@ App de controle de calorias e macros (calorias, proteínas, carboidratos e gordu
 | Recipe | `USER#{id}` | `RECIPE#{id}` | – | – |
 | SavedMeal | `USER#{id}` | `SAVED_MEAL#{id}` | – | – |
 | Usage (cota do dia) | `USER#{id}` | `USAGE#{YYYY-MM-DD}` | – | – |
+| Invite | `INVITE#{code}` | `INVITE` | – | – |
+
+O convite é a única chave que não começa pelo usuário: ele existe antes da conta e é lido só pelo código, com `UpdateItem` direto na chave (nunca `Scan`).
 
 GSI2 e GSI3 estão livres para necessidades futuras.
 
@@ -60,6 +63,7 @@ GSI2 e GSI3 estão livres para necessidades futuras.
 | Buscar refeição salva por id | Main table | `GetItem` PK=`USER#{id}`, SK=`SAVED_MEAL#{savedMealId}` |
 | Listar refeições salvas do usuário | Main table | `Query` PK=`USER#{id}`, `begins_with(SK, 'SAVED_MEAL#')` |
 | Contar um uso da IA no dia, se ainda couber | Main table | `UpdateItem` PK=`USER#{id}`, SK=`USAGE#{day}`, `ADD` com condição |
+| Resgatar ou devolver um uso do convite | Main table | `UpdateItem` PK=`INVITE#{code}`, SK=`INVITE`, `ADD` com condição |
 
 ### 3.3 Atributos
 
@@ -133,6 +137,15 @@ As metas ficam embutidas no item do usuário porque a home sempre precisa das du
 | `recipes` | number | Sugestões de receita usadas no dia (UTC) |
 | `ttl` | number | Epoch em segundos, 2 dias depois do início do dia; o TTL da tabela apaga o item |
 
+**Invite**
+
+| Atributo | Tipo | Observação |
+|---|---|---|
+| `code` | string | Maiúsculas, 4 a 32 letras, dígitos ou hífens |
+| `maxUses` | number | Quantos cadastros o código libera |
+| `uses` | number | Cadastros feitos com ele |
+| `createdAt` | string | ISO 8601 |
+
 **Tipos auxiliares**
 
 ```ts
@@ -197,17 +210,20 @@ Regras do resolver:
 
 ### 4.2 Sign-up
 
-O sign-up acontece no fim do onboarding e recebe dados da conta e do perfil juntos.
+O sign-up acontece no fim do onboarding e recebe dados da conta e do perfil juntos, mais o código de convite (`inviteCode`). O Nutrail é um beta fechado: o app é público, mas só cria conta quem tem convite. Isso mantém o custo da IA sob controle sem esconder o app.
 
 1. Calcula as metas com o `GoalCalculator` (domínio).
 2. Gera o ULID do usuário.
-3. `SignUp` no Cognito → retorna o `sub`.
-4. Registra a compensação na Saga: `AuthProvider.deleteUser(sub)`.
-5. `PutItem` do PROFILE, com `externalId = sub` e `GSI1PK = COGNITO#{sub}`.
-6. Envio do e-mail de boas-vindas pelo `EmailSender`, no idioma da requisição, fora da Saga. Uma falha no envio é logada e não desfaz o cadastro.
-7. Sign-in e retorno dos tokens.
+3. Resgata um uso do convite (`InviteCodes.redeem`): `ADD uses 1` com a condição `attribute_exists(PK) AND uses < maxUses`, atômico mesmo com cadastros simultâneos. Código inexistente ou esgotado → 403 `INVALID_INVITE_CODE`, o mesmo erro nos dois casos para não revelar quais códigos existem. Registra a compensação na Saga: `InviteCodes.release`, que devolve o uso.
+4. `SignUp` no Cognito → retorna o `sub`.
+5. Registra a compensação na Saga: `AuthProvider.deleteUser(sub)`.
+6. `PutItem` do PROFILE, com `externalId = sub` e `GSI1PK = COGNITO#{sub}`.
+7. Envio do e-mail de boas-vindas pelo `EmailSender`, no idioma da requisição, fora da Saga. Uma falha no envio é logada e não desfaz o cadastro.
+8. Sign-in e retorno dos tokens.
 
-Se o passo 5 falhar, a Saga remove o usuário do Cognito, evitando um usuário sem perfil. Como as metas estão embutidas no PROFILE, é uma gravação só e não precisa de UnitOfWork.
+Se o passo 4 falhar (e-mail já em uso), a Saga devolve o uso do convite. Se o passo 6 falhar, a Saga remove o usuário do Cognito, evitando um usuário sem perfil, e devolve o convite.
+
+Os convites são criados por `pnpm invite` (stage `dev`) ou `pnpm invite:prod`, com `--uses` (padrão 1) e `--code` opcionais. O script acha a tabela pela stack do CloudFormation e grava o item com `attribute_not_exists(PK)`. Sem `--code`, gera um código de 8 caracteres (`XXXX-XXXX`) sem os caracteres ambíguos (`I`, `L`, `O`, `U`, `0`, `1`). O código sai impresso e copiado para a área de transferência (no macOS). O código é normalizado com `trim` e maiúsculas no schema, então o app pode mandá-lo como o usuário digitou. Como as metas estão embutidas no PROFILE, é uma gravação só e não precisa de UnitOfWork.
 
 ### 4.3 Troca de senha
 
@@ -295,6 +311,7 @@ Convenção de nomes: o port tem o nome "limpo" e a implementação leva o prefi
 | `Transcriber` | `OpenAITranscriber` | singleton |
 | `RecipeGenerator` | `OpenAIRecipeGenerator` | singleton |
 | `UsageCounter` | `DynamoUsageCounter` | singleton |
+| `InviteCodes` | `DynamoInviteCodes` | singleton |
 | `ListRecipesQuery` | `DynamoListRecipesQuery` | singleton |
 | `IdGenerator` | `UlidIdGenerator` | singleton |
 | `Clock` | `SystemClock` | singleton |

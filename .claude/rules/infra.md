@@ -18,7 +18,11 @@ tabela, bucket e fila vêm do `AppConfig`.
 
 - Single-table. Chaves e access patterns são os da seção 3 de `docs/ARCHITECTURE.md`; entidade ou
   leitura nova entra primeiro lá. GSI2 e GSI3 estão livres.
-- Toda chave começa pelo usuário: `PK = USER#{userId}`. Nunca `Scan`.
+- Toda chave começa pelo usuário: `PK = USER#{userId}`. Nunca `Scan`. A única exceção é o convite,
+  `INVITE#{code}` / `INVITE`, lido só pela chave.
+- Contador com limite (`DynamoUsageCounter`, `DynamoInviteCodes`) é um `UpdateItem` com `ADD` e o
+  limite na `ConditionExpression`, nunca ler e depois gravar. `ConditionalCheckFailedException` vira
+  `false`; qualquer outro erro sobe.
 - `create` grava com `attribute_not_exists(PK)` e `update` com `attribute_exists(PK)`: um update
   não recria o item que outra requisição excluiu.
 - A meal é regravada inteira (`PutCommand`) com o `GSI1PK` da `date` atual: trocar a data move a
@@ -30,9 +34,8 @@ tabela, bucket e fila vêm do `AppConfig`.
 - Exclusão em massa: `BatchWriteItem` de 25, repetindo os `UnprocessedItems`.
 - O repositório monta a entidade a partir do item e devolve `null` quando não acha. Item do
   DynamoDB nunca atravessa o port.
-- `DynamoUsageCounter` incrementa `USAGE#{day}` com `ADD` condicionado ao limite e grava `ttl`
-  (epoch em segundos) com `if_not_exists`. `ConditionalCheckFailedException` vira `false`; qualquer
-  outro erro sobe.
+- `DynamoUsageCounter` incrementa `USAGE#{day}` e grava `ttl` (epoch em segundos) com
+  `if_not_exists`.
 - `DynamoUserIdResolver` é singleton com cache em memória (`sub → userId` nunca muda) e repete a
   consulta ao GSI1 duas vezes (100 e 200 ms) antes de desistir, porque o GSI é eventualmente
   consistente logo após o sign-up.

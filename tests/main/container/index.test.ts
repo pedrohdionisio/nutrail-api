@@ -6,6 +6,7 @@ import { FileStorage } from '@/application/ports/FileStorage';
 import { GetMealQuery } from '@/application/ports/GetMealQuery';
 import { GetProfileQuery } from '@/application/ports/GetProfileQuery';
 import { IdGenerator } from '@/application/ports/IdGenerator';
+import { InviteCodes } from '@/application/ports/InviteCodes';
 import { ListMealsByDayQuery } from '@/application/ports/ListMealsByDayQuery';
 import { ListRecipesQuery } from '@/application/ports/ListRecipesQuery';
 import { ListSavedMealsQuery } from '@/application/ports/ListSavedMealsQuery';
@@ -28,6 +29,7 @@ import { CognitoAuthProvider } from '@/infra/auth/CognitoAuthProvider';
 import { DynamoUserIdResolver } from '@/infra/auth/DynamoUserIdResolver';
 import { DynamoGetMealQuery } from '@/infra/database/dynamo/DynamoGetMealQuery';
 import { DynamoGetProfileQuery } from '@/infra/database/dynamo/DynamoGetProfileQuery';
+import { DynamoInviteCodes } from '@/infra/database/dynamo/DynamoInviteCodes';
 import { DynamoListMealsByDayQuery } from '@/infra/database/dynamo/DynamoListMealsByDayQuery';
 import { DynamoListRecipesQuery } from '@/infra/database/dynamo/DynamoListRecipesQuery';
 import { DynamoListSavedMealsQuery } from '@/infra/database/dynamo/DynamoListSavedMealsQuery';
@@ -65,6 +67,7 @@ const PRODUCTION_BINDINGS: [Token, Token][] = [
   [MealProcessingQueue, SqsMealProcessingQueue],
   [EmailSender, SesEmailSender],
   [UsageCounter, DynamoUsageCounter],
+  [InviteCodes, DynamoInviteCodes],
 ];
 
 describe('container', () => {

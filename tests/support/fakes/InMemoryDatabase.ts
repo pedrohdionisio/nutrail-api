@@ -9,6 +9,7 @@ export class InMemoryDatabase {
   readonly recipes = new Map<string, Recipe>();
   readonly savedMeals = new Map<string, SavedMeal>();
   readonly usage = new Map<string, number>();
+  readonly invites = new Map<string, { maxUses: number; uses: number }>();
 
   putUser(user: User): void {
     this.users.set(user.id, copyUser(user));
@@ -20,6 +21,10 @@ export class InMemoryDatabase {
 
   putRecipe(recipe: Recipe): void {
     this.recipes.set(recipe.id, copyRecipe(recipe));
+  }
+
+  putInvite(code: string, maxUses = 1): void {
+    this.invites.set(code, { maxUses, uses: 0 });
   }
 
   putSavedMeal(savedMeal: SavedMeal): void {

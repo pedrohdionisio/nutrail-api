@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { handler } from '@/main/functions/signUp';
 import {
   errorBody,
@@ -9,11 +9,16 @@ import {
 import { buildProfile } from '../../support/fixtures/user';
 
 const BODY = {
+  inviteCode: 'NUTRAIL-BETA',
   account: { email: 'ana@nutrail.test', password: 'senha-forte' },
   profile: buildProfile(),
 };
 
 describe('POST /auth/sign-up', () => {
+  beforeEach(() => {
+    fakes().db.putInvite('NUTRAIL-BETA');
+  });
+
   it('should create the account with calculated goals and return the tokens', async () => {
     const response = await invoke(handler, { body: BODY });
 
@@ -44,9 +49,31 @@ describe('POST /auth/sign-up', () => {
     });
   });
 
+  it('should accept the invite code in any case and with spaces around it', async () => {
+    expect(
+      await invoke(handler, {
+        body: { ...BODY, inviteCode: '  nutrail-beta ' },
+      }),
+    ).toMatchObject({ statusCode: 201 });
+    expect(fakes().db.invites.get('NUTRAIL-BETA')?.uses).toBe(1);
+  });
+
+  it('should answer 403 for an invite code that does not exist or was used up', async () => {
+    fakes().db.putInvite('USED', 0);
+
+    for (const inviteCode of ['NOPE', 'USED']) {
+      expect(await invoke(handler, { body: { ...BODY, inviteCode } })).toEqual({
+        statusCode: 403,
+        body: errorBody('INVALID_INVITE_CODE'),
+      });
+    }
+    expect(fakes().auth.accounts.size).toBe(0);
+  });
+
   it('should validate the account and the profile', async () => {
     const response = await invoke(handler, {
       body: {
+        inviteCode: 'a b',
         account: { email: 'not-an-email', password: 'short' },
         profile: {
           ...buildProfile(),
@@ -60,6 +87,7 @@ describe('POST /auth/sign-up', () => {
     expect(response).toEqual({
       statusCode: 400,
       body: validationErrorBody(
+        'inviteCode',
         'account.email',
         'account.password',
         'profile.height',

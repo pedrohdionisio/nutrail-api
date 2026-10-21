@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmailAlreadyInUseError } from '@/application/errors/EmailAlreadyInUseError';
+import { InvalidInviteCodeError } from '@/application/errors/InvalidInviteCodeError';
 import { Saga } from '@/application/services/Saga';
 import { SignUpUseCase } from '@/application/usecases/auth/SignUpUseCase';
 import { GoalCalculator } from '@/domain/services/GoalCalculator';
@@ -22,11 +23,14 @@ describe('SignUpUseCase', () => {
       f.clock,
       new Saga(),
       f.emails,
+      f.invites,
     );
+    f.db.putInvite('NUTRAIL-BETA');
   });
 
   it('should create the account and the user with calculated goals, then sign in', async () => {
     const tokens = await signUp.execute({
+      inviteCode: 'NUTRAIL-BETA',
       account: ACCOUNT,
       profile: buildProfile(),
       language: 'pt-BR',
@@ -48,6 +52,7 @@ describe('SignUpUseCase', () => {
 
   it('should send the welcome email in the language of the sign-up', async () => {
     await signUp.execute({
+      inviteCode: 'NUTRAIL-BETA',
       account: ACCOUNT,
       profile: buildProfile(),
       language: 'en-US',
@@ -69,6 +74,7 @@ describe('SignUpUseCase', () => {
 
     await expect(
       signUp.execute({
+        inviteCode: 'NUTRAIL-BETA',
         account: ACCOUNT,
         profile: buildProfile(),
         language: 'pt-BR',
@@ -86,6 +92,7 @@ describe('SignUpUseCase', () => {
 
     await expect(
       signUp.execute({
+        inviteCode: 'NUTRAIL-BETA',
         account: ACCOUNT,
         profile: buildProfile(),
         language: 'pt-BR',
@@ -94,6 +101,7 @@ describe('SignUpUseCase', () => {
     expect(f.auth.deletedExternalIds).toEqual(['sub-new-1']);
     expect(f.auth.accounts.size).toBe(0);
     expect(f.emails.sent).toEqual([]);
+    expect(f.db.invites.get('NUTRAIL-BETA')?.uses).toBe(0);
   });
 
   it('should not create the user when the email is already in use', async () => {
@@ -105,11 +113,42 @@ describe('SignUpUseCase', () => {
 
     await expect(
       signUp.execute({
+        inviteCode: 'NUTRAIL-BETA',
         account: ACCOUNT,
         profile: buildProfile(),
         language: 'pt-BR',
       }),
     ).rejects.toThrow(EmailAlreadyInUseError);
+    expect(f.db.users.size).toBe(0);
+    expect(f.db.invites.get('NUTRAIL-BETA')?.uses).toBe(0);
+  });
+
+  it('should use one of the uses of the invite', async () => {
+    await signUp.execute({
+      inviteCode: 'NUTRAIL-BETA',
+      account: ACCOUNT,
+      profile: buildProfile(),
+      language: 'pt-BR',
+    });
+
+    expect(f.db.invites.get('NUTRAIL-BETA')).toEqual({ maxUses: 1, uses: 1 });
+  });
+
+  it.each([
+    ['an unknown invite', 'NOPE'],
+    ['an invite with no uses left', 'USED'],
+  ])('should refuse %s without creating the account', async (_, code) => {
+    f.db.putInvite('USED', 0);
+
+    await expect(
+      signUp.execute({
+        inviteCode: code,
+        account: ACCOUNT,
+        profile: buildProfile(),
+        language: 'pt-BR',
+      }),
+    ).rejects.toThrow(InvalidInviteCodeError);
+    expect(f.auth.accounts.size).toBe(0);
     expect(f.db.users.size).toBe(0);
   });
 });

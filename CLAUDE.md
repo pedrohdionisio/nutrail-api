@@ -23,8 +23,8 @@ qualquer outra referência, o documento vence.
 - **Commit só quando pedido**, na branch atual. Nunca criar branch, dar push ou amend sem pedido.
 - **Verificação depois de toda mudança: `pnpm lint && pnpm typecheck && pnpm test`**, relatada com
   o resultado. Os testes não dependem de AWS nem de Docker.
-- **Nunca rode `pnpm run deploy`, `serverless deploy` ou `pnpm upload:meal` sem pedido explícito.** Os
-  três falam com a AWS e a OpenAI de verdade.
+- **Nunca rode `pnpm run deploy`, `serverless deploy`, `pnpm upload:meal` ou `pnpm invite` sem
+  pedido explícito.** Eles falam com a AWS e a OpenAI de verdade.
 - **Sem comentários de código.** Explicações vão na conversa, não no arquivo. Só são permitidos
   comentários funcionais (`biome-ignore`, `@type` em JS e similares).
 
@@ -92,7 +92,8 @@ sls/
 1. **Todo dado pertence ao usuário da sessão.** O `userId` vem do `lambdaHttpAdapter`, resolvido
    pelo `UserIdResolver` a partir do `sub` do access token, e nunca de body, params ou query. Toda
    chave do DynamoDB e todo prefixo do S3 começam pelo `userId` (`USER#{userId}`,
-   `pictures/{userId}/`). Toda rota privada tem o authorizer `cognito` no `sls/functions`.
+   `pictures/{userId}/`); a única exceção é o convite (`INVITE#{code}`), que existe antes da conta.
+   Toda rota privada tem o authorizer `cognito` no `sls/functions`.
 2. **`domain` e `application` não conhecem a infra.** `domain` não importa lib nenhuma;
    `application` não importa `infra`, SDK da AWS nem da OpenAI.
 3. **A DI depende da metadata dos construtores.** Ports são `abstract class`, nunca `interface`;
