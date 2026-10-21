@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { DailyLimitReachedError } from '@/application/errors/DailyLimitReachedError';
 import { NoFoodIngredientsError } from '@/application/errors/NoFoodIngredientsError';
 import { UserNotFoundError } from '@/application/errors/UserNotFoundError';
+import { DailyQuota } from '@/application/services/DailyQuota';
 import { SuggestRecipeUseCase } from '@/application/usecases/recipes/SuggestRecipeUseCase';
 import { createFakes, type Fakes } from '../../../support/fakes/createFakes';
+import { exhaustDailyLimit } from '../../../support/fakes/InMemoryUsageCounter';
 import {
   buildMeal,
   buildMealItem,
@@ -21,6 +24,7 @@ describe('SuggestRecipeUseCase', () => {
       f.getProfile,
       f.listMealsByDay,
       f.recipeGenerator,
+      new DailyQuota(f.usage, f.clock),
     );
     f.db.putUser(
       buildUser({
@@ -96,6 +100,20 @@ describe('SuggestRecipeUseCase', () => {
       carbohydrate: 190,
       fat: 0,
     });
+  });
+
+  it('should refuse when the daily recipe limit was reached, without generating', async () => {
+    exhaustDailyLimit(f.db, 'user-1', 'RECIPE');
+
+    await expect(
+      suggestRecipe.execute({
+        userId: 'user-1',
+        date: '2026-09-26',
+        text: 'ovos',
+        language: 'pt-BR',
+      }),
+    ).rejects.toThrow(DailyLimitReachedError);
+    expect(f.recipeGenerator.calls).toEqual([]);
   });
 
   it('should refuse a request without food', async () => {

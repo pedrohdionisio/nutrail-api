@@ -11,8 +11,8 @@ no `implements`; o client e o `AppConfig` do construtor **nunca**.
 
 Os clients (`DynamoDBDocumentClient`, `S3Client`, `SQSClient`, `SSMClient`,
 `CognitoIdentityProviderClient`, `SESv2Client`, `OpenAI`) chegam pelo construtor, registrados por
-`bindFactory` no container. Nunca instanciar client nem exportar singleton de módulo aqui. Nomes de tabela, bucket e fila vêm do
-`AppConfig`.
+`bindFactory` no container. Nunca instanciar client nem exportar singleton de módulo aqui. Nomes de
+tabela, bucket e fila vêm do `AppConfig`.
 
 ## DynamoDB (`infra/database/dynamo/`)
 
@@ -30,6 +30,9 @@ Os clients (`DynamoDBDocumentClient`, `S3Client`, `SQSClient`, `SSMClient`,
 - Exclusão em massa: `BatchWriteItem` de 25, repetindo os `UnprocessedItems`.
 - O repositório monta a entidade a partir do item e devolve `null` quando não acha. Item do
   DynamoDB nunca atravessa o port.
+- `DynamoUsageCounter` incrementa `USAGE#{day}` com `ADD` condicionado ao limite e grava `ttl`
+  (epoch em segundos) com `if_not_exists`. `ConditionalCheckFailedException` vira `false`; qualquer
+  outro erro sobe.
 - `DynamoUserIdResolver` é singleton com cache em memória (`sub → userId` nunca muda) e repete a
   consulta ao GSI1 duas vezes (100 e 200 ms) antes de desistir, porque o GSI é eventualmente
   consistente logo após o sign-up.

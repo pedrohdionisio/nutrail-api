@@ -2,6 +2,7 @@ import { Clock } from '@/application/ports/Clock';
 import { IdGenerator } from '@/application/ports/IdGenerator';
 import { MealAnalyzer } from '@/application/ports/MealAnalyzer';
 import { MealRepository } from '@/application/ports/MealRepository';
+import { DailyQuota } from '@/application/services/DailyQuota';
 import { Meal } from '@/domain/entities/Meal';
 import type { Language } from '@/domain/value-objects/Language';
 import { Injectable } from '@/kernel/decorators/Injectable';
@@ -21,9 +22,12 @@ export class CreateManualMealUseCase {
     private readonly analyzer: MealAnalyzer,
     private readonly ids: IdGenerator,
     private readonly clock: Clock,
+    private readonly quota: DailyQuota,
   ) {}
 
   async execute({ userId, date, time, text, language }: Input): Promise<Meal> {
+    await this.quota.consume(userId, 'MEAL_ANALYSIS');
+
     const meal = new Meal({
       id: this.ids.generate(),
       userId,

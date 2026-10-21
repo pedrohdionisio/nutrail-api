@@ -16,6 +16,7 @@ import { RecipeGenerator } from '@/application/ports/RecipeGenerator';
 import { RecipeRepository } from '@/application/ports/RecipeRepository';
 import { SavedMealRepository } from '@/application/ports/SavedMealRepository';
 import { Transcriber } from '@/application/ports/Transcriber';
+import { UsageCounter } from '@/application/ports/UsageCounter';
 import { UserIdResolver } from '@/application/ports/UserIdResolver';
 import { UserRepository } from '@/application/ports/UserRepository';
 import { Saga } from '@/application/services/Saga';
@@ -33,6 +34,7 @@ import { DynamoListSavedMealsQuery } from '@/infra/database/dynamo/DynamoListSav
 import { DynamoMealRepository } from '@/infra/database/dynamo/DynamoMealRepository';
 import { DynamoRecipeRepository } from '@/infra/database/dynamo/DynamoRecipeRepository';
 import { DynamoSavedMealRepository } from '@/infra/database/dynamo/DynamoSavedMealRepository';
+import { DynamoUsageCounter } from '@/infra/database/dynamo/DynamoUsageCounter';
 import { DynamoUserRepository } from '@/infra/database/dynamo/DynamoUserRepository';
 import { SesEmailSender } from '@/infra/email/SesEmailSender';
 import { SqsMealProcessingQueue } from '@/infra/queue/SqsMealProcessingQueue';
@@ -62,6 +64,7 @@ const PRODUCTION_BINDINGS: [Token, Token][] = [
   [RecipeGenerator, OpenAIRecipeGenerator],
   [MealProcessingQueue, SqsMealProcessingQueue],
   [EmailSender, SesEmailSender],
+  [UsageCounter, DynamoUsageCounter],
 ];
 
 describe('container', () => {

@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { handler } from '@/main/functions/createMeal';
 import {
+  errorBody,
   fakes,
   givenSignedInUser,
   invoke,
   validationErrorBody,
 } from '../../support/app';
 import { UPLOAD_URL } from '../../support/fakes/FakeFileStorage';
+import { exhaustDailyLimit } from '../../support/fakes/InMemoryUsageCounter';
 
 describe('POST /meals', () => {
   it('should create the meal and return the upload signature of its input file', async () => {
@@ -45,5 +47,21 @@ describe('POST /meals', () => {
       statusCode: 400,
       body: validationErrorBody('date', 'time', 'inputType'),
     });
+  });
+
+  it('should answer 429 when the daily limit of meal analyses was reached', async () => {
+    const user = givenSignedInUser();
+    exhaustDailyLimit(fakes().db, user.id, 'MEAL_ANALYSIS');
+
+    expect(
+      await invoke(handler, {
+        as: user,
+        body: { date: '2026-09-26', time: '12:30', inputType: 'AUDIO' },
+      }),
+    ).toEqual({
+      statusCode: 429,
+      body: errorBody('DAILY_LIMIT_REACHED'),
+    });
+    expect(fakes().db.meals.size).toBe(0);
   });
 });

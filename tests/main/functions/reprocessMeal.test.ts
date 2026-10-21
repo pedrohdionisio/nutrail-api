@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { handler } from '@/main/functions/reprocessMeal';
 import { errorBody, fakes, givenSignedInUser, invoke } from '../../support/app';
+import { exhaustDailyLimit } from '../../support/fakes/InMemoryUsageCounter';
 import { buildMeal, buildPendingMeal } from '../../support/fixtures/meal';
 
 describe('POST /meals/{mealId}/reprocess', () => {
@@ -40,5 +41,19 @@ describe('POST /meals/{mealId}/reprocess', () => {
       statusCode: 404,
       body: errorBody('MEAL_NOT_FOUND'),
     });
+  });
+
+  it('should answer 429 when the daily limit of meal analyses was reached', async () => {
+    const user = givenSignedInUser();
+    fakes().db.putMeal(buildPendingMeal({ status: 'FAILED', attempts: 3 }));
+    exhaustDailyLimit(fakes().db, user.id, 'MEAL_ANALYSIS');
+
+    expect(
+      await invoke(handler, { as: user, params: { mealId: 'meal-1' } }),
+    ).toEqual({
+      statusCode: 429,
+      body: errorBody('DAILY_LIMIT_REACHED'),
+    });
+    expect(fakes().queue.published).toEqual([]);
   });
 });

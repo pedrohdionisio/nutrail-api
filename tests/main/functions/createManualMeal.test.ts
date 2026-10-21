@@ -8,6 +8,7 @@ import {
   invoke,
   validationErrorBody,
 } from '../../support/app';
+import { exhaustDailyLimit } from '../../support/fakes/InMemoryUsageCounter';
 import { buildMealAnalysis } from '../../support/fixtures/meal';
 
 const BODY = {
@@ -85,5 +86,16 @@ describe('POST /meals/manual', () => {
         body: { ...BODY, text: 'a'.repeat(1001) },
       }),
     ).toEqual({ statusCode: 400, body: validationErrorBody('text') });
+  });
+
+  it('should answer 429 when the daily limit of meal analyses was reached', async () => {
+    const user = givenSignedInUser();
+    exhaustDailyLimit(fakes().db, user.id, 'MEAL_ANALYSIS');
+
+    expect(await invoke(handler, { as: user, body: BODY })).toEqual({
+      statusCode: 429,
+      body: errorBody('DAILY_LIMIT_REACHED'),
+    });
+    expect(fakes().db.meals.size).toBe(0);
   });
 });

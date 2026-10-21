@@ -18,6 +18,7 @@ import {
 } from './InMemoryQueries';
 import { InMemoryRecipeRepository } from './InMemoryRecipeRepository';
 import { InMemorySavedMealRepository } from './InMemorySavedMealRepository';
+import { InMemoryUsageCounter } from './InMemoryUsageCounter';
 import { InMemoryUserRepository } from './InMemoryUserRepository';
 import { SequentialIdGenerator } from './SequentialIdGenerator';
 
@@ -38,6 +39,7 @@ export function createFakes() {
     listRecipes: new InMemoryListRecipesQuery(db),
     listSavedMeals: new InMemoryListSavedMealsQuery(db),
     userIdResolver: new InMemoryUserIdResolver(db),
+    usage: new InMemoryUsageCounter(db),
     auth: new FakeAuthProvider(),
     storage: new FakeFileStorage(),
     analyzer: new FakeMealAnalyzer(),

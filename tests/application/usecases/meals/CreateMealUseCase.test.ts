@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { DailyLimitReachedError } from '@/application/errors/DailyLimitReachedError';
+import { DailyQuota } from '@/application/services/DailyQuota';
 import { CreateMealUseCase } from '@/application/usecases/meals/CreateMealUseCase';
 import { createFakes, type Fakes } from '../../../support/fakes/createFakes';
 import { UPLOAD_URL } from '../../../support/fakes/FakeFileStorage';
+import { exhaustDailyLimit } from '../../../support/fakes/InMemoryUsageCounter';
 
 describe('CreateMealUseCase', () => {
   let f: Fakes;
@@ -9,7 +12,13 @@ describe('CreateMealUseCase', () => {
 
   beforeEach(() => {
     f = createFakes();
-    createMeal = new CreateMealUseCase(f.meals, f.storage, f.ids, f.clock);
+    createMeal = new CreateMealUseCase(
+      f.meals,
+      f.storage,
+      f.ids,
+      f.clock,
+      new DailyQuota(f.usage, f.clock),
+    );
   });
 
   it('should create an uploading picture meal whose picture is its input', async () => {
@@ -67,5 +76,21 @@ describe('CreateMealUseCase', () => {
       pictureKey: null,
     });
     expect(f.storage.uploads[0]?.contentType).toBe('audio/m4a');
+  });
+
+  it('should refuse when the daily limit was reached, without creating the meal', async () => {
+    exhaustDailyLimit(f.db, 'user-1', 'MEAL_ANALYSIS');
+
+    await expect(
+      createMeal.execute({
+        userId: 'user-1',
+        date: '2026-09-26',
+        time: '12:30',
+        inputType: 'PICTURE',
+        language: 'en-US',
+      }),
+    ).rejects.toThrow(DailyLimitReachedError);
+    expect(f.db.meals.size).toBe(0);
+    expect(f.storage.uploads).toEqual([]);
   });
 });

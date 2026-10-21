@@ -8,6 +8,7 @@ export class InMemoryDatabase {
   readonly meals = new Map<string, Meal>();
   readonly recipes = new Map<string, Recipe>();
   readonly savedMeals = new Map<string, SavedMeal>();
+  readonly usage = new Map<string, number>();
 
   putUser(user: User): void {
     this.users.set(user.id, copyUser(user));

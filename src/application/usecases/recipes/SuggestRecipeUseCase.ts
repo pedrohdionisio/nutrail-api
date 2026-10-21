@@ -3,6 +3,7 @@ import { UserNotFoundError } from '@/application/errors/UserNotFoundError';
 import { GetProfileQuery } from '@/application/ports/GetProfileQuery';
 import { ListMealsByDayQuery } from '@/application/ports/ListMealsByDayQuery';
 import { RecipeGenerator } from '@/application/ports/RecipeGenerator';
+import { DailyQuota } from '@/application/services/DailyQuota';
 import type { RecipeContent } from '@/domain/entities/Recipe';
 import type { Language } from '@/domain/value-objects/Language';
 import type { Macros } from '@/domain/value-objects/Macros';
@@ -21,6 +22,7 @@ export class SuggestRecipeUseCase {
     private readonly getProfile: GetProfileQuery,
     private readonly listMealsByDay: ListMealsByDayQuery,
     private readonly generator: RecipeGenerator,
+    private readonly quota: DailyQuota,
   ) {}
 
   async execute({
@@ -37,6 +39,8 @@ export class SuggestRecipeUseCase {
     if (!me) {
       throw new UserNotFoundError();
     }
+
+    await this.quota.consume(userId, 'RECIPE');
 
     const recipe = await this.generator.generate({
       text,

@@ -44,6 +44,7 @@ App de controle de calorias e macros (calorias, proteínas, carboidratos e gordu
 | Meal | `USER#{id}` | `MEAL#{id}` | `MEAL#{userId}#{date}` | `MEAL#{createdAt}` |
 | Recipe | `USER#{id}` | `RECIPE#{id}` | – | – |
 | SavedMeal | `USER#{id}` | `SAVED_MEAL#{id}` | – | – |
+| Usage (cota do dia) | `USER#{id}` | `USAGE#{YYYY-MM-DD}` | – | – |
 
 GSI2 e GSI3 estão livres para necessidades futuras.
 
@@ -58,6 +59,7 @@ GSI2 e GSI3 estão livres para necessidades futuras.
 | Listar receitas do usuário | Main table | `Query` PK=`USER#{id}`, `begins_with(SK, 'RECIPE#')` |
 | Buscar refeição salva por id | Main table | `GetItem` PK=`USER#{id}`, SK=`SAVED_MEAL#{savedMealId}` |
 | Listar refeições salvas do usuário | Main table | `Query` PK=`USER#{id}`, `begins_with(SK, 'SAVED_MEAL#')` |
+| Contar um uso da IA no dia, se ainda couber | Main table | `UpdateItem` PK=`USER#{id}`, SK=`USAGE#{day}`, `ADD` com condição |
 
 ### 3.3 Atributos
 
@@ -122,6 +124,14 @@ As metas ficam embutidas no item do usuário porque a home sempre precisa das du
 | `items` | `Item[]` | Copiados da refeição de origem |
 | `calories`, `protein`, `carbohydrate`, `fat` | number | Totais, derivados dos itens |
 | `createdAt` | string | ISO 8601 |
+
+**Usage**
+
+| Atributo | Tipo | Observação |
+|---|---|---|
+| `mealAnalyses` | number | Análises de refeição usadas no dia (UTC) |
+| `recipes` | number | Sugestões de receita usadas no dia (UTC) |
+| `ttl` | number | Epoch em segundos, 2 dias depois do início do dia; o TTL da tabela apaga o item |
 
 **Tipos auxiliares**
 
@@ -209,7 +219,7 @@ Se o passo 5 falhar, a Saga remove o usuário do Cognito, evitando um usuário s
 
 1. Arquivos no S3 por prefixo (`pictures/{userId}/` e `inputs/{userId}/`), o que pega também arquivos não referenciados por nenhuma meal.
 2. Usuário no Cognito (`AuthProvider.deleteUser`, que ignora usuário inexistente).
-3. Toda a partição `USER#{id}` no DynamoDB (perfil, meals e receitas), em `BatchWriteItem` de 25, com retry dos itens não processados.
+3. Toda a partição `USER#{id}` no DynamoDB (perfil, meals, receitas, refeições salvas e contadores de uso), em `BatchWriteItem` de 25, com retry dos itens não processados.
 
 A ordem garante que uma falha possa ser repetida pelo próprio usuário: enquanto o perfil existir, o `UserIdResolver` resolve e o `DELETE /me` pode ser chamado de novo. O único estado sem retomada pela API é uma falha no passo 3 depois do passo 2; ela fica logada para limpeza manual. O access token continua válido até expirar (o authorizer só confere a assinatura). Instâncias de Lambda sem o `sub` no cache do resolver respondem 401, porque o perfil não existe mais; uma instância que já tinha o `sub` em cache ainda resolveria o `userId` até o token expirar, e uma gravação nesse intervalo criaria dados órfãos. O risco foi aceito por ser estreito (o mesmo usuário agindo logo após excluir a conta).
 
@@ -284,6 +294,7 @@ Convenção de nomes: o port tem o nome "limpo" e a implementação leva o prefi
 | `MealAnalyzer` (`analyzeImage`, `analyzeText`) | `OpenAIMealAnalyzer` | singleton |
 | `Transcriber` | `OpenAITranscriber` | singleton |
 | `RecipeGenerator` | `OpenAIRecipeGenerator` | singleton |
+| `UsageCounter` | `DynamoUsageCounter` | singleton |
 | `ListRecipesQuery` | `DynamoListRecipesQuery` | singleton |
 | `IdGenerator` | `UlidIdGenerator` | singleton |
 | `Clock` | `SystemClock` | singleton |
@@ -386,6 +397,12 @@ CloudWatch, dentro do free tier (10 alarmes padrão e 5 GB de logs por mês). Ca
 A IA é o único custo que cresce com o uso, então o acesso a ela tem limite.
 
 - **Throttling do HTTP API** (`sls/resources/httpApi.yml`): 10 requisições por segundo, com burst de 20, somadas para todas as rotas do stage. É uma proteção contra rajada e loop de cliente, não contra um usuário específico. Acima disso o próprio API Gateway responde `429` sem chamar a Lambda, com o corpo `{"message":"Too Many Requests"}`, sem `code`, e o app mostra o erro genérico.
+- **Cota diária por usuário** (`DailyQuota`, `application/services/`): 20 análises de refeição e 5 sugestões de receita por dia UTC. O limite é do usuário, não do cliente, então vale mesmo com o app adulterado.
+  - Conta como análise: `POST /meals/manual`, `POST /meals` (foto ou áudio), `POST /meals/{mealId}/reprocess` e `POST /meals/items/analysis`. Conta como receita: `POST /recipes/suggestions`. As tentativas automáticas da fila não contam, porque já foram pagas na criação.
+  - O use case consome a cota **antes** de chamar a IA e depois das validações baratas (meal inexistente ou que não pode ser reprocessada não gasta cota). Uma análise que falha continua contada: a chamada à OpenAI já custou.
+  - O port `UsageCounter` incrementa o item `USAGE#{day}` com `ADD` e a condição `attribute_not_exists(#count) OR #count < :limit`, atômico mesmo com requisições simultâneas. A condição falhando, o `DailyQuota` lança 429 `DAILY_LIMIT_REACHED`.
+  - O dia é o UTC, e não o local do app: a data do cliente não é confiável para limitar custo, e virar o dia às 21h no Brasil não importa para uma cota.
+  - O item tem `ttl` de 2 dias e some sozinho pelo TTL da tabela. A exclusão da conta também o apaga, porque está na partição `USER#{id}`.
 
 ---
 

@@ -5,6 +5,7 @@ import {
 } from '@/application/ports/FileStorage';
 import { IdGenerator } from '@/application/ports/IdGenerator';
 import { MealRepository } from '@/application/ports/MealRepository';
+import { DailyQuota } from '@/application/services/DailyQuota';
 import {
   MAX_MEAL_FILE_SIZE_BYTES,
   MEAL_FILES,
@@ -35,6 +36,7 @@ export class CreateMealUseCase {
     private readonly storage: FileStorage,
     private readonly ids: IdGenerator,
     private readonly clock: Clock,
+    private readonly quota: DailyQuota,
   ) {}
 
   async execute({
@@ -44,6 +46,8 @@ export class CreateMealUseCase {
     inputType,
     language,
   }: Input): Promise<Output> {
+    await this.quota.consume(userId, 'MEAL_ANALYSIS');
+
     const mealId = this.ids.generate();
     const fileKey = mealFileKey(inputType, userId, mealId);
 

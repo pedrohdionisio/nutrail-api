@@ -8,6 +8,7 @@ import {
   invoke,
   validationErrorBody,
 } from '../../support/app';
+import { exhaustDailyLimit } from '../../support/fakes/InMemoryUsageCounter';
 import { buildMeal } from '../../support/fixtures/meal';
 import { buildRecipeContent } from '../../support/fixtures/recipe';
 
@@ -67,5 +68,16 @@ describe('POST /recipes/suggestions', () => {
       statusCode: 400,
       body: validationErrorBody('date', 'text'),
     });
+  });
+
+  it('should answer 429 when the daily limit of recipes was reached', async () => {
+    const user = givenSignedInUser();
+    exhaustDailyLimit(fakes().db, user.id, 'RECIPE');
+
+    expect(await invoke(handler, { as: user, body: BODY })).toEqual({
+      statusCode: 429,
+      body: errorBody('DAILY_LIMIT_REACHED'),
+    });
+    expect(fakes().recipeGenerator.calls).toEqual([]);
   });
 });

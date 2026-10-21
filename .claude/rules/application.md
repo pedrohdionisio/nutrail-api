@@ -53,6 +53,9 @@ paths:
 - Chaves, tipos e limite de tamanho dos arquivos de refeição vêm de `application/services/mealFiles.ts`
   (`mealFileKey`, `MEAL_FILES`, `MAX_MEAL_FILE_SIZE_BYTES`). Nunca montar a chave à mão.
 - Nada de `new Date()`, `Date.now()` ou `ulid()`: use `Clock` e `IdGenerator`.
+- **Toda chamada à IA disparada pelo usuário passa pelo `DailyQuota`** (`application/services/`):
+  `await this.quota.consume(userId, 'MEAL_ANALYSIS' | 'RECIPE')` antes do port de IA (ou da
+  publicação na fila) e depois das validações baratas. Os limites ficam em `DAILY_LIMITS`.
 
 ## Erros de aplicação (`src/application/errors/`)
 

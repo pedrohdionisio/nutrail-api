@@ -22,6 +22,7 @@ export class AnalyzeMealItemsController extends Controller<
   }
 
   protected async handle({
+    userId,
     body,
     language,
   }: ControllerRequest<
@@ -29,6 +30,7 @@ export class AnalyzeMealItemsController extends Controller<
     AnalyzeMealItemsBody
   >): Promise<ControllerResponse> {
     const items = await this.analyzeMealItems.execute({
+      userId,
       text: body.text,
       language,
     });
