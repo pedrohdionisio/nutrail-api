@@ -423,7 +423,7 @@ A IA é o único custo que cresce com o uso, então o acesso a ela tem limite.
 
 ### 5.9 Domínio e e-mail
 
-O domínio é `nutrail.app` (`custom.domain` no `serverless.yml`), com o DNS na Vercel, onde os registros são criados à mão.
+O domínio é `nutrail.app` (`custom.domain` no `serverless.yml`), com o DNS na Cloudflare, onde os registros são criados à mão e sempre como "DNS only" (sem o proxy da Cloudflare, que quebraria a validação do DKIM e o certificado da API).
 
 - **Recursos da conta, não do stage, ficam só em `prod`**, pela condição `IsProd`. A identity do SES é única por conta e região; se estivesse nas duas stacks, o deploy da segunda falharia. Ela tem `DeletionPolicy: Retain`, para remover a stack não derrubar o envio de e-mail.
 - **Identity `nutrail.app`** (`sls/resources/ses.yml`): Easy DKIM com chave RSA de 2048 bits e MAIL FROM em `mail.nutrail.app`, para o SPF alinhar com o domínio do remetente em vez de `amazonses.com`. Os três CNAMEs de DKIM saem como outputs da stack `prod` (`EmailDkimRecord1..3`).
@@ -431,8 +431,9 @@ O domínio é `nutrail.app` (`custom.domain` no `serverless.yml`), com o DNS na 
   - `mail.nutrail.app` MX `10 feedback-smtp.us-east-1.amazonses.com`;
   - `mail.nutrail.app` TXT `v=spf1 include:amazonses.com ~all`;
   - `_dmarc.nutrail.app` TXT `v=DMARC1; p=quarantine`. Sem `rua`, porque o domínio não recebe e-mail.
+- **API em `https://api.nutrail.app`, só no `prod`** (`sls/resources/apiDomain.yml`): certificado do ACM validado por DNS, domínio regional do API Gateway com TLS 1.2 e o mapeamento para o stage `$default`. O `prod` tem `DisableExecuteApiEndpoint`, então o domínio é a única entrada; o `dev` continua na URL `execute-api`. No primeiro deploy com o domínio, o CloudFormation espera o certificado ser validado: o registro de validação aparece no ACM e é criado à mão no DNS. Depois, `api` vira um CNAME para o domínio regional, que sai no output `ApiDomainRecord`.
 - **Sandbox:** a conta começa no sandbox do SES (só envia para endereços verificados, 200 por dia). A saída é pedida uma vez no console, depois da identity verificada.
-- **Remetente:** o `EMAIL_FROM` e o Cognito só passam para `no-reply@nutrail.app` depois que a identity estiver verificada: o Cognito recusa uma identity não verificada, e o deploy falharia.
+- **Remetente:** os e-mails da API (`EMAIL_FROM`) saem como `Nutrail <no-reply@nutrail.app>` nos dois stages, porque a identity é da conta. O e-mail de recuperação de senha continua saindo pelo remetente padrão do Cognito (`no-reply@verificationemail.com`, até 50 por dia), com o conteúdo do trigger `customMessage`. Ele só passa para o SES depois da saída do sandbox: no sandbox, o SES só entrega para endereços verificados, e quem não estivesse verificado ficaria sem conseguir recuperar a senha.
 
 ---
 

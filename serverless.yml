@@ -20,7 +20,7 @@ provider:
     MEAL_QUEUE_URL: !Ref MealProcessingQueue
     COGNITO_USER_POOL_ID: !Ref UserPool
     COGNITO_CLIENT_ID: !Ref UserPoolClient
-    EMAIL_FROM: 'Nutrail <pedrohenriquedionisioalves@gmail.com>'
+    EMAIL_FROM: 'Nutrail <no-reply@${self:custom.domain}>'
     OPENAI_API_KEY_PARAMETER: ${self:custom.openaiApiKeyParameter}
   httpApi:
     authorizers:
@@ -125,3 +125,4 @@ resources:
   - ${file(sls/resources/monitoring.yml)}
   - ${file(sls/resources/httpApi.yml)}
   - ${file(sls/resources/ses.yml)}
+  - ${file(sls/resources/apiDomain.yml)}

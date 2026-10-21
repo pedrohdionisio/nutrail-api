@@ -58,7 +58,8 @@ paths:
 - Só recursos pay-per-use, com nome carregando `${sls:stage}` quando nomeados. Nada sempre ligado.
 - Recurso único por conta (identity do SES, e depois o certificado e o domínio da API) leva
   `Condition: IsProd` (definida em `sls/resources/ses.yml`) e só existe na stack `prod`. O domínio
-  vem de `custom.domain`.
+  vem de `custom.domain`. O `prod` só responde em `api.nutrail.app` (`sls/resources/apiDomain.yml`,
+  com `DisableExecuteApiEndpoint` no `httpApi.yml`); o `dev` usa a URL `execute-api`.
 - O stage do HTTP API (`HttpApiStage`, gerado pelo Serverless) é ajustado em
   `sls/resources/httpApi.yml` por `extensions`: throttling de 10 rps com burst de 20 para todas as
   rotas. Cada chave das `Properties` da extensão substitui a gerada inteira, então

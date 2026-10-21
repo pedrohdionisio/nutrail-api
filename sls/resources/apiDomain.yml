@@ -1,0 +1,30 @@
+Resources:
+  ApiCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Condition: IsProd
+    Properties:
+      DomainName: api.${self:custom.domain}
+      ValidationMethod: DNS
+
+  ApiDomainName:
+    Type: AWS::ApiGatewayV2::DomainName
+    Condition: IsProd
+    Properties:
+      DomainName: api.${self:custom.domain}
+      DomainNameConfigurations:
+        - CertificateArn: !Ref ApiCertificate
+          EndpointType: REGIONAL
+          SecurityPolicy: TLS_1_2
+
+  ApiDomainMapping:
+    Type: AWS::ApiGatewayV2::ApiMapping
+    Condition: IsProd
+    Properties:
+      ApiId: !Ref HttpApi
+      DomainName: !Ref ApiDomainName
+      Stage: !Ref HttpApiStage
+
+Outputs:
+  ApiDomainRecord:
+    Condition: IsProd
+    Value: !Join [' ', ['api.${self:custom.domain}', CNAME, !GetAtt ApiDomainName.RegionalDomainName]]

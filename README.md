@@ -152,13 +152,15 @@ pnpm run deploy         # stage dev; pnpm run deploy --stage prod for production
 
 - Account-wide resources, like the SES identity for `nutrail.app`, exist only in the `prod` stack.
   After the first `prod` deploy, its outputs list the DKIM records to add to the DNS.
+- `prod` answers only at `https://api.nutrail.app` (the `execute-api` URL is disabled); `dev` keeps
+  the `execute-api` URL. The DNS of `nutrail.app` lives in Cloudflare, every record as "DNS only".
 
 - The OpenAI key is read at runtime from the SSM `SecureString` `/nutrail-api/{stage}/openai-api-key`,
   never from the function configuration. Rotating it is `put-parameter --overwrite`; new Lambda
   instances pick it up.
 
-- The sender in `EMAIL_FROM` (`serverless.yml`) must be a verified SES identity, or the welcome
-  e-mail is not sent. Sign-up does not fail because of it.
+- The sender in `EMAIL_FROM` (`serverless.yml`, `no-reply@nutrail.app`) must be a verified SES
+  identity, or the welcome e-mail is not sent. Sign-up does not fail because of it.
 - AWS sends a confirmation link to `ALERT_EMAIL`; the alarms only reach you after it is confirmed.
 - Sign-up is invite-only. `pnpm invite` creates a single-use code on `dev` and copies it to the
   clipboard; `pnpm invite:prod` does the same on `prod`. Add `--uses 5` for a shared code or
