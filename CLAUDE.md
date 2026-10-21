@@ -72,7 +72,7 @@ src/
   shared/config/  AppConfig
 sls/
   functions/      uma função por arquivo
-  resources/      DynamoDB, S3, SQS, Cognito e monitoramento
+  resources/      DynamoDB, S3, SQS, Cognito, monitoramento e stage do HTTP API
 ```
 
 ## Convenções

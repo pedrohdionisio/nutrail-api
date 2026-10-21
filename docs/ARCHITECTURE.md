@@ -381,6 +381,12 @@ CloudWatch, dentro do free tier (10 alarmes padrão e 5 GB de logs por mês). Ca
 - **Mensagem na DLQ:** uma meal esgotou as tentativas de processamento.
 - Logs das Lambdas com retenção de 30 dias (`provider.logRetentionInDays`).
 
+### 5.8 Limites de uso
+
+A IA é o único custo que cresce com o uso, então o acesso a ela tem limite.
+
+- **Throttling do HTTP API** (`sls/resources/httpApi.yml`): 10 requisições por segundo, com burst de 20, somadas para todas as rotas do stage. É uma proteção contra rajada e loop de cliente, não contra um usuário específico. Acima disso o próprio API Gateway responde `429` sem chamar a Lambda, com o corpo `{"message":"Too Many Requests"}`, sem `code`, e o app mostra o erro genérico.
+
 ---
 
 ## 6. Armazenamento de arquivos (S3)

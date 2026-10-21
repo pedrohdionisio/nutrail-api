@@ -122,3 +122,4 @@ resources:
   - ${file(sls/resources/sqs.yml)}
   - ${file(sls/resources/cognito.yml)}
   - ${file(sls/resources/monitoring.yml)}
+  - ${file(sls/resources/httpApi.yml)}

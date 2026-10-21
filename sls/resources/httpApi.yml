@@ -1,0 +1,7 @@
+extensions:
+  HttpApiStage:
+    Properties:
+      DefaultRouteSettings:
+        DetailedMetricsEnabled: false
+        ThrottlingRateLimit: 10
+        ThrottlingBurstLimit: 20
