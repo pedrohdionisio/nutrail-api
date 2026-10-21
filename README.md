@@ -144,9 +144,15 @@ The API runs on real AWS resources provisioned by the Serverless Framework.
 
 ```bash
 pnpm install
-cp .env.example .env    # OPENAI_API_KEY and ALERT_EMAIL
+cp .env.example .env    # ALERT_EMAIL
+aws ssm put-parameter --type SecureString \
+  --name /nutrail-api/dev/openai-api-key --value <key>    # once per stage
 pnpm run deploy         # stage dev; pnpm run deploy --stage prod for production
 ```
+
+- The OpenAI key is read at runtime from the SSM `SecureString` `/nutrail-api/{stage}/openai-api-key`,
+  never from the function configuration. Rotating it is `put-parameter --overwrite`; new Lambda
+  instances pick it up.
 
 - The sender in `EMAIL_FROM` (`serverless.yml`) must be a verified SES identity, or the welcome
   e-mail is not sent. Sign-up does not fail because of it.

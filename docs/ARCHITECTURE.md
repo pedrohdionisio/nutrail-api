@@ -289,7 +289,9 @@ Convenção de nomes: o port tem o nome "limpo" e a implementação leva o prefi
 | `Clock` | `SystemClock` | singleton |
 | `Saga` | `Saga` | **transient** |
 
-Os clients da AWS e da OpenAI (`DynamoDBDocumentClient`, `S3Client`, `SQSClient`, `CognitoIdentityProviderClient`, `SESv2Client`, `OpenAI`) também são injetados via container (factory, singleton). Nunca importados como singleton de módulo.
+Os clients da AWS e da OpenAI (`DynamoDBDocumentClient`, `S3Client`, `SQSClient`, `SSMClient`, `CognitoIdentityProviderClient`, `SESv2Client`, `OpenAI`) também são injetados via container (factory, singleton). Nunca importados como singleton de módulo.
+
+A chave da OpenAI é o único segredo e fica no SSM Parameter Store como `SecureString`, em `/nutrail-api/{stage}/openai-api-key`, criado à mão uma vez por stage (o CloudFormation não cria `SecureString`). A Lambda recebe só o nome do parâmetro (`OPENAI_API_KEY_PARAMETER`) e a permissão `ssm:GetParameter` nele. O client da OpenAI recebe `apiKey` como função, e o `SsmOpenAIApiKey` lê o parâmetro na primeira chamada à OpenAI e guarda o valor enquanto a instância viver; uma falha na leitura não fica em cache. Assim a chave não aparece na configuração da função nem no template do CloudFormation, e trocar a chave é atualizar o parâmetro (as instâncias novas já leem o valor novo).
 
 `Clock` existe porque a data local da refeição e o cálculo de idade dependem de "agora". Com ele, os testes controlam o tempo.
 

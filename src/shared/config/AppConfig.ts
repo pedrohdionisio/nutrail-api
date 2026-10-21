@@ -10,7 +10,7 @@ export class AppConfig {
     from: required('EMAIL_FROM'),
   };
   readonly openai = {
-    apiKey: required('OPENAI_API_KEY'),
+    apiKeyParameter: required('OPENAI_API_KEY_PARAMETER'),
   };
 }
 

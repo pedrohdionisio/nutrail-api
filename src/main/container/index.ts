@@ -3,6 +3,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { S3Client } from '@aws-sdk/client-s3';
 import { SESv2Client } from '@aws-sdk/client-sesv2';
 import { SQSClient } from '@aws-sdk/client-sqs';
+import { SSMClient } from '@aws-sdk/client-ssm';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import OpenAI from 'openai';
 import { AuthProvider } from '@/application/ports/AuthProvider';
@@ -54,6 +55,7 @@ import { GoalCalculator } from '@/domain/services/GoalCalculator';
 import { OpenAIMealAnalyzer } from '@/infra/ai/OpenAIMealAnalyzer';
 import { OpenAIRecipeGenerator } from '@/infra/ai/OpenAIRecipeGenerator';
 import { OpenAITranscriber } from '@/infra/ai/OpenAITranscriber';
+import { SsmOpenAIApiKey } from '@/infra/ai/SsmOpenAIApiKey';
 import { CognitoAuthProvider } from '@/infra/auth/CognitoAuthProvider';
 import { DynamoUserIdResolver } from '@/infra/auth/DynamoUserIdResolver';
 import { DynamoGetMealQuery } from '@/infra/database/dynamo/DynamoGetMealQuery';
@@ -124,11 +126,13 @@ container
   .bindFactory(SESv2Client, () => new SESv2Client({}), { scope: 'singleton' })
   .bindFactory(S3Client, () => new S3Client({}), { scope: 'singleton' })
   .bindFactory(SQSClient, () => new SQSClient({}), { scope: 'singleton' })
+  .bindFactory(SSMClient, () => new SSMClient({}), { scope: 'singleton' })
+  .bind(SsmOpenAIApiKey, SsmOpenAIApiKey, { scope: 'singleton' })
   .bindFactory(
     OpenAI,
     (c) =>
       new OpenAI({
-        apiKey: c.resolve(AppConfig).openai.apiKey,
+        apiKey: () => c.resolve(SsmOpenAIApiKey).get(),
         timeout: 25_000,
         maxRetries: 1,
       }),

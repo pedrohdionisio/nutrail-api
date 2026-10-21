@@ -36,8 +36,11 @@ paths:
 ## Configuração (`src/shared/config/AppConfig.ts`)
 
 - Variável de ambiente só é lida aqui, por `required(name)`, que falha no carregamento com o nome
-  da variável. Variável nova entra no `provider.environment` do `serverless.yml`; se for segredo,
-  vem de `${env:NOME}` e entra no `.env.example`.
+  da variável. Variável nova entra no `provider.environment` do `serverless.yml`.
+- Segredo nunca vai para `provider.environment` nem para `${env:}` ou `${ssm:}` resolvidos no
+  deploy, que gravam o valor em texto puro na configuração da função. Ele fica no SSM Parameter
+  Store como `SecureString` em `/${service}/${stage}/<nome>`, a Lambda recebe só o nome do parâmetro
+  e lê o valor em runtime, com cache (`SsmOpenAIApiKey`).
 
 ## Serverless (`serverless.yml`, `sls/`)
 
@@ -57,4 +60,5 @@ paths:
   `mealUploaded`, `processMeal` e `customMessage`, mensagem na DLQ), todos notificando o SNS
   `alerts`. Função assíncrona nova ganha alarme de erro; rota HTTP já é coberta pelo 5xx.
 - Deploy só com pedido explícito: `pnpm run deploy` (ou `pnpm run deploy --stage prod`), com
-  `OPENAI_API_KEY` e `ALERT_EMAIL` no ambiente. Sem o `run`, `pnpm deploy` é outro comando do pnpm.
+  `ALERT_EMAIL` no ambiente e o parâmetro `/nutrail-api/<stage>/openai-api-key` já criado. Sem o
+  `run`, `pnpm deploy` é outro comando do pnpm.

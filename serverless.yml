@@ -1,6 +1,9 @@
 service: nutrail-api
 frameworkVersion: '4'
 
+custom:
+  openaiApiKeyParameter: /${self:service}/${sls:stage}/openai-api-key
+
 provider:
   name: aws
   runtime: nodejs24.x
@@ -17,7 +20,7 @@ provider:
     COGNITO_USER_POOL_ID: !Ref UserPool
     COGNITO_CLIENT_ID: !Ref UserPoolClient
     EMAIL_FROM: 'Nutrail <pedrohenriquedionisioalves@gmail.com>'
-    OPENAI_API_KEY: ${env:OPENAI_API_KEY}
+    OPENAI_API_KEY_PARAMETER: ${self:custom.openaiApiKeyParameter}
   httpApi:
     authorizers:
       cognito:
@@ -59,6 +62,10 @@ provider:
             - cognito-idp:AdminSetUserPassword
             - cognito-idp:AdminDeleteUser
           Resource: !GetAtt UserPool.Arn
+        - Effect: Allow
+          Action:
+            - ssm:GetParameter
+          Resource: !Join ['', ['arn:aws:ssm:', !Ref AWS::Region, ':', !Ref AWS::AccountId, ':parameter${self:custom.openaiApiKeyParameter}']]
         - Effect: Allow
           Action:
             - ses:SendEmail

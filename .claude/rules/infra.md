@@ -9,9 +9,9 @@ Cada implementação leva o prefixo da tecnologia (`MealRepository` → `DynamoM
 `@Injectable()` e declara `implements <Port>`. O port pode vir por `import type`, porque só aparece
 no `implements`; o client e o `AppConfig` do construtor **nunca**.
 
-Os clients (`DynamoDBDocumentClient`, `S3Client`, `SQSClient`, `CognitoIdentityProviderClient`,
-`SESv2Client`, `OpenAI`) chegam pelo construtor, registrados por `bindFactory` no container. Nunca
-instanciar client nem exportar singleton de módulo aqui. Nomes de tabela, bucket e fila vêm do
+Os clients (`DynamoDBDocumentClient`, `S3Client`, `SQSClient`, `SSMClient`,
+`CognitoIdentityProviderClient`, `SESv2Client`, `OpenAI`) chegam pelo construtor, registrados por
+`bindFactory` no container. Nunca instanciar client nem exportar singleton de módulo aqui. Nomes de tabela, bucket e fila vêm do
 `AppConfig`.
 
 ## DynamoDB (`infra/database/dynamo/`)
@@ -70,6 +70,8 @@ instanciar client nem exportar singleton de módulo aqui. Nomes de tabela, bucke
 
 - Um adapter por port: `OpenAIMealAnalyzer`, `OpenAITranscriber`, `OpenAIRecipeGenerator`. O modelo é
   uma constante `MODEL` no adapter.
+- A chave vem do SSM pelo `SsmOpenAIApiKey`, passado ao client como `apiKey: () => ...get()`. Ele
+  guarda a promessa da leitura (uma só por instância) e a descarta se falhar.
 - Análise e receita usam a Responses API com Structured Outputs (`zodTextFormat`) e
   `reasoning: { effort: 'low' }`. Sem `output_parsed`, logue o `response.id` e lance o erro 502 do
   caso (`MealAnalysisFailedError`, `RecipeGenerationFailedError`).
