@@ -1,0 +1,37 @@
+Resources:
+  MonthlyBudget:
+    Type: AWS::Budgets::Budget
+    Condition: IsProd
+    Properties:
+      Budget:
+        BudgetName: nutrail-monthly
+        BudgetType: COST
+        TimeUnit: MONTHLY
+        BudgetLimit:
+          Amount: 15
+          Unit: USD
+      NotificationsWithSubscribers:
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            ThresholdType: ABSOLUTE_VALUE
+            Threshold: 5
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: ${env:ALERT_EMAIL}
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            ThresholdType: ABSOLUTE_VALUE
+            Threshold: 15
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: ${env:ALERT_EMAIL}
+        - Notification:
+            NotificationType: FORECASTED
+            ComparisonOperator: GREATER_THAN
+            ThresholdType: ABSOLUTE_VALUE
+            Threshold: 15
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: ${env:ALERT_EMAIL}

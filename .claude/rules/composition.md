@@ -56,7 +56,7 @@ paths:
   estoura o limite de 250 MB da Lambda.
 - Permissão nova vai em `provider.iam.role.statements`, com a ação mínima e o recurso específico.
 - Só recursos pay-per-use, com nome carregando `${sls:stage}` quando nomeados. Nada sempre ligado.
-- Recurso único por conta (identity do SES, e depois o certificado e o domínio da API) leva
+- Recurso único por conta (identity do SES, certificado e domínio da API, orçamento) leva
   `Condition: IsProd` (definida em `sls/resources/ses.yml`) e só existe na stack `prod`. O domínio
   vem de `custom.domain`. O `prod` só responde em `api.nutrail.app` (`sls/resources/apiDomain.yml`,
   com `DisableExecuteApiEndpoint` no `httpApi.yml`); o `dev` usa a URL `execute-api`.

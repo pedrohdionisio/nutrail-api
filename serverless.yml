@@ -127,3 +127,4 @@ resources:
   - ${file(sls/resources/httpApi.yml)}
   - ${file(sls/resources/ses.yml)}
   - ${file(sls/resources/apiDomain.yml)}
+  - ${file(sls/resources/budget.yml)}
