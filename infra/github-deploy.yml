@@ -1,12 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Lets GitHub Actions deploy nutrail-api through OIDC, without long-lived AWS keys.
 
-Parameters:
-  Repository:
-    Type: String
-    Description: The repository as GitHub writes it in the OIDC subject, owner@ownerId/repo@repoId.
-    Default: pedrohdionisio@67081399/nutrail-api@1386532154
-
 Resources:
   GitHubOidcProvider:
     Type: AWS::IAM::OIDCProvider
@@ -68,8 +62,8 @@ Resources:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
                 token.actions.githubusercontent.com:sub:
-                  - !Sub repo:${Repository}:ref:refs/heads/main
-                  - !Sub repo:${Repository}:environment:production
+                  - repo:pedrohdionisio@67081399/nutrail-api@1386532154:ref:refs/heads/main
+                  - repo:pedrohdionisio@67081399/nutrail-api@1386532154:environment:production
       Policies:
         - PolicyName: nutrail-api-deploy
           PolicyDocument:
@@ -89,17 +83,7 @@ Resources:
                 Action: iam:PassRole
                 Resource: !GetAtt CloudFormationExecutionRole.Arn
               - Effect: Allow
-                Action:
-                  - s3:GetObject
-                  - s3:PutObject
-                  - s3:DeleteObject
-                  - s3:ListBucket
-                  - s3:GetBucketLocation
-                  - s3:CreateBucket
-                  - s3:PutBucketPolicy
-                  - s3:PutBucketTagging
-                  - s3:PutEncryptionConfiguration
-                  - s3:PutBucketPublicAccessBlock
+                Action: s3:*
                 Resource:
                   - arn:aws:s3:::serverless-framework-deployments-us-east-1-*
                   - arn:aws:s3:::serverless-framework-deployments-us-east-1-*/*
