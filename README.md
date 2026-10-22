@@ -22,7 +22,7 @@ what is left in the fridge.
 - [Meal lifecycle](#meal-lifecycle)
 - [Engineering decisions](#engineering-decisions)
 - [See it run in two commands](#see-it-run-in-two-commands)
-- [Deploying](#deploying)
+- [Run it on your own AWS account](#run-it-on-your-own-aws-account)
 - [Tests](#tests)
 - [Project layout](#project-layout)
 - [Stack](#stack)
@@ -138,53 +138,133 @@ The feature suite invokes the real Lambda handlers, through the real HTTP adapte
 for every route and for the S3 and SQS events, with DynamoDB, S3, SQS, Cognito, SES and OpenAI
 replaced by in-memory fakes.
 
-## Deploying
+## Run it on your own AWS account
 
-The API runs on real AWS resources provisioned by the Serverless Framework. GitHub Actions deploys
-it (`.github/workflows/ci.yml`):
+Everything below runs on your own AWS and OpenAI accounts. Nothing in the repository points to the
+author's accounts: the domain, the sender address and the deploy role are optional settings.
 
-| Event | What runs |
-|---|---|
-| Pull request | Lint, typecheck and tests |
-| Push to `main` | Checks, then deploy to `dev` |
-| Tag `v*` | Checks, then deploy to `prod` after approval in the `production` environment |
+### What you need
 
-GitHub signs in to AWS through OIDC, with no AWS keys stored in the repository. The role it assumes
-(`nutrail-api-github-deploy`) can only touch the `nutrail-api-*` stacks and hand them to the role
-CloudFormation deploys with (`nutrail-api-cloudformation`, `provider.iam.deploymentRole`); both come
-from `infra/github-deploy.yml`, deployed once by hand:
+- **Node.js 24** and **pnpm**.
+- An **AWS account**, with the AWS CLI signed in (`aws sts get-caller-identity` should work). The
+  stack lives in `us-east-1`.
+- An **OpenAI API key** from an account with billing enabled.
+- A free **Serverless Framework** account: the framework's v4 asks for a login before the first
+  deploy (`npx serverless login`). It is free for individuals and companies under $2M in revenue.
 
-```bash
-aws cloudformation deploy --region us-east-1 --stack-name nutrail-github-deploy \
-  --template-file infra/github-deploy.yml --capabilities CAPABILITY_NAMED_IAM
-```
-
-The repository needs the secret `SERVERLESS_ACCESS_KEY` and the variables `ALERT_EMAIL` and
-`AWS_DEPLOY_ROLE_ARN` (the `GitHubDeployRoleArn` output). Deploying by hand still works:
+### Deploy
 
 ```bash
 pnpm install
-cp .env.example .env    # ALERT_EMAIL
-aws ssm put-parameter --type SecureString \
-  --name /nutrail-api/dev/openai-api-key --value <key>    # once per stage
-pnpm run deploy         # stage dev; pnpm run deploy --stage prod for production
+cp .env.example .env     # set ALERT_EMAIL
+
+aws ssm put-parameter --region us-east-1 --type SecureString \
+  --name /nutrail-api/dev/openai-api-key --value 'sk-...'
+
+pnpm run deploy          # stage dev, about 5 minutes the first time
 ```
 
-- Account-wide resources, like the SES identity for `nutrail.app`, exist only in the `prod` stack.
-  After the first `prod` deploy, its outputs list the DKIM records to add to the DNS.
-- `prod` answers only at `https://api.nutrail.app` (the `execute-api` URL is disabled); `dev` keeps
-  the `execute-api` URL. The DNS of `nutrail.app` lives in Cloudflare, every record as "DNS only".
+The deploy prints `HttpApiUrl`: that is the API, and the app's `EXPO_PUBLIC_API_URL`. Then:
 
-- The OpenAI key is read at runtime from the SSM `SecureString` `/nutrail-api/{stage}/openai-api-key`,
-  never from the function configuration. Rotating it is `put-parameter --overwrite`; new Lambda
-  instances pick it up.
+1. **Confirm the alarms.** AWS sends a confirmation link to `ALERT_EMAIL`; the alarms only reach
+   you after it is clicked.
+2. **Verify your e-mail in SES**, so the welcome e-mail can go out from it:
+   `aws sesv2 create-email-identity --region us-east-1 --email-identity you@example.com`, then click
+   the link AWS sends. New AWS accounts are in the SES sandbox, where e-mails only reach verified
+   addresses, so sign up in the app with that same address. The password recovery code is sent by
+   Cognito, not SES, and reaches any address.
+3. **Smoke test the pipeline** (optional): sign up in the app, fill `BASE_URL`,
+   `TEST_USER_EMAIL` and `TEST_USER_PASSWORD` in `.env` and run `pnpm upload:meal`, which uploads
+   a picture or a voice note and waits for the analysis.
 
-- The sender in `EMAIL_FROM` (`serverless.yml`, `no-reply@nutrail.app`) must be a verified SES
-  identity, or the welcome e-mail is not sent. Sign-up does not fail because of it.
-- AWS sends a confirmation link to `ALERT_EMAIL`; the alarms only reach you after it is confirmed.
-- `pnpm upload:meal [file]` signs in with `TEST_USER_EMAIL` and `TEST_USER_PASSWORD` against
-  `BASE_URL`, uploads a picture or a voice note and polls until the meal is analyzed — a smoke test
-  of the whole pipeline on a deployed stage.
+The OpenAI key is read at runtime from that SSM `SecureString`, never from the function
+configuration. Rotating it is `put-parameter --overwrite`; new Lambda instances pick it up.
+
+### What it costs
+
+Every resource is pay-per-use: Lambda, API Gateway, DynamoDB on demand, S3, SQS, Cognito and
+CloudWatch, so an idle stack costs close to nothing and light personal use stays in the AWS free
+tier. The real cost is OpenAI, a few cents per analyzed meal or recipe. To keep it bounded:
+
+- each user gets **20 meal analyses and 5 recipes a day**, and the API takes at most 10 requests a
+  second;
+- set a **monthly limit** in the OpenAI dashboard (Settings → Limits);
+- the `prod` stage creates an **AWS budget** that e-mails `ALERT_EMAIL` above $5 and $15 a month; on
+  `dev` only, create one in the AWS console.
+
+### Optional: a second stage on your own domain
+
+`dev` is all you need. A `prod` stage is a second, isolated copy (its own users, table and bucket):
+
+```bash
+aws ssm put-parameter --region us-east-1 --type SecureString \
+  --name /nutrail-api/prod/openai-api-key --value 'sk-...'
+pnpm run deploy --stage prod
+```
+
+With `DOMAIN` and `EMAIL_FROM` set in `.env`, `prod` also serves the API at `https://api.<DOMAIN>`
+and sends e-mail from your domain. Account-wide resources (the SES identity, the certificate, the
+budget) exist only in `prod`. The DNS records are created by hand, as "DNS only" if the DNS is on
+Cloudflare:
+
+1. During the first deploy, CloudFormation waits for the certificate: add the validation CNAME that
+   AWS Certificate Manager shows for `api.<DOMAIN>`.
+2. After it, add these records:
+
+   | Type | Name | Value |
+   |---|---|---|
+   | CNAME ×3 | from the outputs `EmailDkimRecord1..3` | DKIM |
+   | CNAME | `api` | from the output `ApiDomainRecord` |
+   | MX | `mail` | `10 feedback-smtp.us-east-1.amazonses.com` |
+   | TXT | `mail` | `v=spf1 include:amazonses.com ~all` |
+   | TXT | `_dmarc` | `v=DMARC1; p=quarantine` |
+
+With a domain, `prod` answers only at `api.<DOMAIN>`; the `execute-api` URL is turned off.
+
+### Optional: CI/CD with GitHub Actions
+
+`.github/workflows/ci.yml` runs lint, typecheck and tests on every pull request, deploys `dev` on
+every push to `main` and `prod` on every `v*` tag, after an approval in the `production`
+environment. GitHub signs in to AWS through OIDC, with no AWS keys stored in the repository:
+
+1. Find your repository's ids: `owner.id` and `id` in
+   `https://api.github.com/repos/<owner>/<repo>`.
+2. Create the deploy roles once:
+
+   ```bash
+   aws cloudformation deploy --region us-east-1 --stack-name nutrail-github-deploy \
+     --template-file infra/github-deploy.yml --capabilities CAPABILITY_NAMED_IAM \
+     --parameter-overrides Repository=<owner>@<ownerId>/<repo>@<repoId>
+   ```
+
+   An AWS account holds one GitHub OIDC provider; if yours already has one, remove
+   `GitHubOidcProvider` from the template and reference the existing one.
+3. In the repository settings, add the secret `SERVERLESS_ACCESS_KEY` (from the Serverless
+   dashboard) and the variables `ALERT_EMAIL`, `AWS_DEPLOY_ROLE_ARN` (the stack's
+   `GitHubDeployRoleArn` output) and `DEPLOYMENT_ROLE_ARN` (its `CloudFormationExecutionRoleArn`),
+   plus `DOMAIN` and `EMAIL_FROM` if you use them. Set `DEPLOYMENT_ROLE_ARN` in `.env` too, so local
+   deploys go through the same role.
+4. Create the `production` environment with yourself as a required reviewer, limited to `v*` tags.
+
+The GitHub role can only touch the `nutrail-api-*` stacks and hand them to the role CloudFormation
+deploys with (`nutrail-api-cloudformation`), so the resources are created by CloudFormation, not by
+GitHub.
+
+### Remove everything
+
+```bash
+npx serverless remove --stage dev
+```
+
+The table, the bucket, the Cognito user pool and the SES identity are kept on purpose
+(`DeletionPolicy: Retain`), so a removed stack never loses data. Delete them in the console when you
+are sure, emptying the bucket first, and delete the `/nutrail-api/<stage>/openai-api-key`
+parameter.
+
+### This repository's own deploy
+
+The author's `dev` stage deploys on every push to `main`, and `prod` serves `https://api.nutrail.app`
+from `v*` tags, with the `nutrail.app` DNS on Cloudflare.
 
 | Script | What it does |
 |---|---|

@@ -1,10 +1,7 @@
-Conditions:
-  IsProd: !Equals ['${sls:stage}', 'prod']
-
 Resources:
   EmailIdentity:
     Type: AWS::SES::EmailIdentity
-    Condition: IsProd
+    Condition: UsesDomain
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
@@ -17,11 +14,11 @@ Resources:
 
 Outputs:
   EmailDkimRecord1:
-    Condition: IsProd
+    Condition: UsesDomain
     Value: !Join [' ', [!GetAtt EmailIdentity.DkimDNSTokenName1, CNAME, !GetAtt EmailIdentity.DkimDNSTokenValue1]]
   EmailDkimRecord2:
-    Condition: IsProd
+    Condition: UsesDomain
     Value: !Join [' ', [!GetAtt EmailIdentity.DkimDNSTokenName2, CNAME, !GetAtt EmailIdentity.DkimDNSTokenValue2]]
   EmailDkimRecord3:
-    Condition: IsProd
+    Condition: UsesDomain
     Value: !Join [' ', [!GetAtt EmailIdentity.DkimDNSTokenName3, CNAME, !GetAtt EmailIdentity.DkimDNSTokenValue3]]

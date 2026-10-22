@@ -407,9 +407,11 @@ A IA é o único custo que cresce com o uso, então o acesso a ela tem limite.
 
 ### 5.9 Domínio e e-mail
 
-O domínio é `nutrail.app` (`custom.domain` no `serverless.yml`), com o DNS na Cloudflare, onde os registros são criados à mão e sempre como "DNS only" (sem o proxy da Cloudflare, que quebraria a validação do DKIM e o certificado da API).
+Tudo que depende de um domínio é **opcional**, para o projeto subir em qualquer conta AWS. Sem a variável `DOMAIN`, o deploy cria só a API na URL `execute-api` e manda os e-mails do próprio `ALERT_EMAIL`. Com `DOMAIN` (e, de costume, `EMAIL_FROM`), o stage `prod` ganha a identity do SES e a API no domínio. As condições ficam em `sls/resources/conditions.yml`: `IsProd`, `HasDomain` e `UsesDomain` (as duas juntas).
 
-- **Recursos da conta, não do stage, ficam só em `prod`**, pela condição `IsProd`. A identity do SES é única por conta e região; se estivesse nas duas stacks, o deploy da segunda falharia. Ela tem `DeletionPolicy: Retain`, para remover a stack não derrubar o envio de e-mail.
+No deploy do autor, o domínio é `nutrail.app`, com o DNS na Cloudflare, onde os registros são criados à mão e sempre como "DNS only" (sem o proxy da Cloudflare, que quebraria a validação do DKIM e o certificado da API).
+
+- **Recursos da conta, não do stage, ficam só em `prod`**: a identity do SES e o domínio da API com `UsesDomain`, o orçamento com `IsProd`. A identity do SES é única por conta e região; se estivesse nas duas stacks, o deploy da segunda falharia. Ela tem `DeletionPolicy: Retain`, para remover a stack não derrubar o envio de e-mail.
 - **Identity `nutrail.app`** (`sls/resources/ses.yml`): Easy DKIM com chave RSA de 2048 bits e MAIL FROM em `mail.nutrail.app`, para o SPF alinhar com o domínio do remetente em vez de `amazonses.com`. Os três CNAMEs de DKIM saem como outputs da stack `prod` (`EmailDkimRecord1..3`).
 - **DNS**, além dos CNAMEs de DKIM:
   - `mail.nutrail.app` MX `10 feedback-smtp.us-east-1.amazonses.com`;
@@ -417,7 +419,7 @@ O domínio é `nutrail.app` (`custom.domain` no `serverless.yml`), com o DNS na 
   - `_dmarc.nutrail.app` TXT `v=DMARC1; p=quarantine`. Sem `rua`, porque o domínio não recebe e-mail.
 - **API em `https://api.nutrail.app`, só no `prod`** (`sls/resources/apiDomain.yml`): certificado do ACM validado por DNS, domínio regional do API Gateway com TLS 1.2 e o mapeamento para o stage `$default`. O `prod` tem `DisableExecuteApiEndpoint`, então o domínio é a única entrada; o `dev` continua na URL `execute-api`. No primeiro deploy com o domínio, o CloudFormation espera o certificado ser validado: o registro de validação aparece no ACM e é criado à mão no DNS. Depois, `api` vira um CNAME para o domínio regional, que sai no output `ApiDomainRecord`.
 - **Sandbox:** a conta começa no sandbox do SES (só envia para endereços verificados, 200 por dia). A saída é pedida uma vez no console, depois da identity verificada.
-- **Remetente:** os e-mails da API (`EMAIL_FROM`) saem como `Nutrail <no-reply@nutrail.app>` nos dois stages, porque a identity é da conta. O e-mail de recuperação de senha continua saindo pelo remetente padrão do Cognito (`no-reply@verificationemail.com`, até 50 por dia), com o conteúdo do trigger `customMessage`. Ele só passa para o SES depois da saída do sandbox: no sandbox, o SES só entrega para endereços verificados, e quem não estivesse verificado ficaria sem conseguir recuperar a senha.
+- **Remetente:** os e-mails da API saem como `Nutrail <EMAIL_FROM>`, ou `Nutrail <ALERT_EMAIL>` sem ele, e esse endereço (ou o domínio dele) precisa estar verificado no SES. No deploy do autor, `no-reply@nutrail.app` nos dois stages, porque a identity é da conta. O e-mail de recuperação de senha continua saindo pelo remetente padrão do Cognito (`no-reply@verificationemail.com`, até 50 por dia), com o conteúdo do trigger `customMessage`. Ele só passa para o SES depois da saída do sandbox: no sandbox, o SES só entrega para endereços verificados, e quem não estivesse verificado ficaria sem conseguir recuperar a senha.
 
 ### 5.10 Deploy contínuo
 
@@ -427,13 +429,13 @@ GitHub Actions, num workflow só (`.github/workflows/ci.yml`):
 - **Push na `main`:** os mesmos checks e, se passarem, deploy do `dev`.
 - **Tag `v*`:** os checks e o deploy do `prod`, no environment `production` do GitHub, que exige aprovação manual e só aceita tags `v*`.
 
-O GitHub entra na AWS por OIDC, sem chave guardada. `infra/github-deploy.yml` é implantado uma vez à mão (é ele que cria o acesso, então não pode ser implantado pelo próprio CI) e cria:
+O GitHub entra na AWS por OIDC, sem chave guardada. `infra/github-deploy.yml` é implantado uma vez à mão (é ele que cria o acesso, então não pode ser implantado pelo próprio CI), com o parâmetro `Repository` no formato do `sub` do token, e cria:
 
 - o provedor OIDC de `token.actions.githubusercontent.com`;
 - a role `nutrail-api-github-deploy`, que só o repositório assume, e só na `main` ou no environment `production` (PR e fork não conseguem). O GitHub escreve no `sub` do token os IDs imutáveis do dono e do repositório (`repo:pedrohdionisio@67081399/nutrail-api@1386532154:ref:refs/heads/main`), e a condição usa esse formato: um repositório recriado com o mesmo nome não herda o acesso. Ela mexe apenas nas stacks `nutrail-api-*`, nos buckets de deploy do Serverless (`serverless-framework-deployments-us-east-1-*`, que ele reconfigura a cada deploy) e no parâmetro `/serverless-framework/*`, e repassa a role abaixo;
-- a role `nutrail-api-cloudformation`, com que o CloudFormation cria os recursos (`provider.iam.deploymentRole`): `PowerUserAccess` e IAM só para roles `nutrail-api-*`.
+- a role `nutrail-api-cloudformation`, com que o CloudFormation cria os recursos (`provider.iam.deploymentRole`, ligada pela variável `DEPLOYMENT_ROLE_ARN`): `PowerUserAccess` e IAM só para roles `nutrail-api-*`.
 
-Separar as duas mantém quase nenhuma permissão no GitHub: quem cria os recursos é o CloudFormation. O deploy manual usa a mesma `deploymentRole`, então o que passa na máquina passa no CI. O Serverless v4 exige login também no CI, pelo secret `SERVERLESS_ACCESS_KEY`.
+Separar as duas mantém quase nenhuma permissão no GitHub: quem cria os recursos é o CloudFormation. Com `DEPLOYMENT_ROLE_ARN` no `.env`, o deploy manual usa a mesma role, então o que passa na máquina passa no CI; sem ela (quem só faz deploy da própria máquina), o CloudFormation usa as credenciais de quem roda o deploy. No CI, as variáveis opcionais vazias são removidas antes do deploy, porque uma variável vazia não é o mesmo que ausente para o Serverless. O Serverless v4 exige login também no CI, pelo secret `SERVERLESS_ACCESS_KEY`.
 
 ---
 

@@ -53,10 +53,17 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: us-east-1
-      - run: pnpm run deploy --stage dev
+      - run: |
+          for name in EMAIL_FROM DOMAIN DEPLOYMENT_ROLE_ARN; do
+            [ -n "${!name}" ] || unset "$name"
+          done
+          pnpm run deploy --stage dev
         env:
           SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
           ALERT_EMAIL: ${{ vars.ALERT_EMAIL }}
+          EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+          DOMAIN: ${{ vars.DOMAIN }}
+          DEPLOYMENT_ROLE_ARN: ${{ vars.DEPLOYMENT_ROLE_ARN }}
 
   deploy-prod:
     name: Deploy prod
@@ -83,7 +90,14 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: us-east-1
-      - run: pnpm run deploy --stage prod
+      - run: |
+          for name in EMAIL_FROM DOMAIN DEPLOYMENT_ROLE_ARN; do
+            [ -n "${!name}" ] || unset "$name"
+          done
+          pnpm run deploy --stage prod
         env:
           SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
           ALERT_EMAIL: ${{ vars.ALERT_EMAIL }}
+          EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+          DOMAIN: ${{ vars.DOMAIN }}
+          DEPLOYMENT_ROLE_ARN: ${{ vars.DEPLOYMENT_ROLE_ARN }}

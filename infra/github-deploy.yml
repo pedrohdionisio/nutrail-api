@@ -1,6 +1,12 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Lets GitHub Actions deploy nutrail-api through OIDC, without long-lived AWS keys.
 
+Parameters:
+  Repository:
+    Type: String
+    Description: The repository as GitHub writes it in the OIDC subject, owner@ownerId/repo@repoId.
+    AllowedPattern: '[^/@]+@[0-9]+/[^/@]+@[0-9]+'
+
 Resources:
   GitHubOidcProvider:
     Type: AWS::IAM::OIDCProvider
@@ -62,8 +68,8 @@ Resources:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
                 token.actions.githubusercontent.com:sub:
-                  - repo:pedrohdionisio@67081399/nutrail-api@1386532154:ref:refs/heads/main
-                  - repo:pedrohdionisio@67081399/nutrail-api@1386532154:environment:production
+                  - !Sub repo:${Repository}:ref:refs/heads/main
+                  - !Sub repo:${Repository}:environment:production
       Policies:
         - PolicyName: nutrail-api-deploy
           PolicyDocument:

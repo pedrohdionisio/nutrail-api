@@ -2,7 +2,7 @@ service: nutrail-api
 frameworkVersion: '4'
 
 custom:
-  domain: nutrail.app
+  domain: ${env:DOMAIN, ''}
   openaiApiKeyParameter: /${self:service}/${sls:stage}/openai-api-key
 
 provider:
@@ -20,7 +20,7 @@ provider:
     MEAL_QUEUE_URL: !Ref MealProcessingQueue
     COGNITO_USER_POOL_ID: !Ref UserPool
     COGNITO_CLIENT_ID: !Ref UserPoolClient
-    EMAIL_FROM: 'Nutrail <no-reply@${self:custom.domain}>'
+    EMAIL_FROM: 'Nutrail <${env:EMAIL_FROM, env:ALERT_EMAIL}>'
     OPENAI_API_KEY_PARAMETER: ${self:custom.openaiApiKeyParameter}
   httpApi:
     authorizers:
@@ -30,7 +30,7 @@ provider:
         audience:
           - !Ref UserPoolClient
   iam:
-    deploymentRole: arn:aws:iam::${aws:accountId}:role/nutrail-api-cloudformation
+    deploymentRole: ${env:DEPLOYMENT_ROLE_ARN, null}
     role:
       statements:
         - Effect: Allow
@@ -119,6 +119,7 @@ functions:
   - ${file(sls/functions/createMealFromSavedMeal.yml)}
 
 resources:
+  - ${file(sls/resources/conditions.yml)}
   - ${file(sls/resources/dynamodb.yml)}
   - ${file(sls/resources/s3.yml)}
   - ${file(sls/resources/sqs.yml)}

@@ -1,14 +1,14 @@
 Resources:
   ApiCertificate:
     Type: AWS::CertificateManager::Certificate
-    Condition: IsProd
+    Condition: UsesDomain
     Properties:
       DomainName: api.${self:custom.domain}
       ValidationMethod: DNS
 
   ApiDomainName:
     Type: AWS::ApiGatewayV2::DomainName
-    Condition: IsProd
+    Condition: UsesDomain
     Properties:
       DomainName: api.${self:custom.domain}
       DomainNameConfigurations:
@@ -18,7 +18,7 @@ Resources:
 
   ApiDomainMapping:
     Type: AWS::ApiGatewayV2::ApiMapping
-    Condition: IsProd
+    Condition: UsesDomain
     Properties:
       ApiId: !Ref HttpApi
       DomainName: !Ref ApiDomainName
@@ -26,5 +26,5 @@ Resources:
 
 Outputs:
   ApiDomainRecord:
-    Condition: IsProd
+    Condition: UsesDomain
     Value: !Join [' ', ['api.${self:custom.domain}', CNAME, !GetAtt ApiDomainName.RegionalDomainName]]

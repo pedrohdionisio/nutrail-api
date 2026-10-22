@@ -56,10 +56,13 @@ paths:
   estoura o limite de 250 MB da Lambda.
 - Permissão nova vai em `provider.iam.role.statements`, com a ação mínima e o recurso específico.
 - Só recursos pay-per-use, com nome carregando `${sls:stage}` quando nomeados. Nada sempre ligado.
-- Recurso único por conta (identity do SES, certificado e domínio da API, orçamento) leva
-  `Condition: IsProd` (definida em `sls/resources/ses.yml`) e só existe na stack `prod`. O domínio
-  vem de `custom.domain`. O `prod` só responde em `api.nutrail.app` (`sls/resources/apiDomain.yml`,
-  com `DisableExecuteApiEndpoint` no `httpApi.yml`); o `dev` usa a URL `execute-api`.
+- O projeto sobe em qualquer conta AWS: nada pode depender da conta do autor. O que é dele entra por
+  variável opcional do `.env` (`DOMAIN`, `EMAIL_FROM`, `DEPLOYMENT_ROLE_ARN`), com fallback que
+  funciona sem ela (`${env:DOMAIN, ''}`, `${env:DEPLOYMENT_ROLE_ARN, null}`). Variável vazia não é
+  ausente: no `.env.example` as opcionais ficam comentadas.
+- Recurso único por conta só existe na stack `prod`, pelas condições de
+  `sls/resources/conditions.yml`: identity do SES e domínio da API com `UsesDomain` (`prod` com `DOMAIN`), orçamento com `IsProd`.
+  Com domínio, o `prod` só responde nele (`DisableExecuteApiEndpoint` no `httpApi.yml`).
 - O stage do HTTP API (`HttpApiStage`, gerado pelo Serverless) é ajustado em
   `sls/resources/httpApi.yml` por `extensions`: throttling de 10 rps com burst de 20 para todas as
   rotas. Cada chave das `Properties` da extensão substitui a gerada inteira, então
@@ -67,10 +70,10 @@ paths:
 - Monitoramento cabe no free tier do CloudWatch: 5 alarmes por stage (5xx do HTTP API, erros de
   `mealUploaded`, `processMeal` e `customMessage`, mensagem na DLQ), todos notificando o SNS
   `alerts`. Função assíncrona nova ganha alarme de erro; rota HTTP já é coberta pelo 5xx.
-- Todo deploy passa pela role `nutrail-api-cloudformation` (`provider.iam.deploymentRole`), criada
-  por `infra/github-deploy.yml`. Recurso de um serviço novo fora do `PowerUserAccess` (IAM que não
+- Com `DEPLOYMENT_ROLE_ARN`, o deploy passa pela role `nutrail-api-cloudformation`
+  (`provider.iam.deploymentRole`), criada por `infra/github-deploy.yml`. Recurso de um serviço novo fora do `PowerUserAccess` (IAM que não
   seja role `nutrail-api-*`) exige mudar esse template antes. O CI (`.github/workflows/ci.yml`)
   faz o deploy do `dev` na `main` e do `prod` em tag `v*`.
 - Deploy só com pedido explícito: `pnpm run deploy` (ou `pnpm run deploy --stage prod`), com
-  `ALERT_EMAIL` no ambiente e o parâmetro `/nutrail-api/<stage>/openai-api-key` já criado. Sem o
+  o `.env` preenchido e o parâmetro `/nutrail-api/<stage>/openai-api-key` já criado. Sem o
   `run`, `pnpm deploy` é outro comando do pnpm.

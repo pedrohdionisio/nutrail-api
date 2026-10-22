@@ -1,0 +1,4 @@
+Conditions:
+  IsProd: !Equals ['${sls:stage}', 'prod']
+  HasDomain: !Not [!Equals ['${self:custom.domain}', '']]
+  UsesDomain: !And [!Condition IsProd, !Condition HasDomain]

@@ -1,7 +1,7 @@
 extensions:
   HttpApi:
     Properties:
-      DisableExecuteApiEndpoint: !If [IsProd, true, false]
+      DisableExecuteApiEndpoint: !If [UsesDomain, true, false]
   HttpApiStage:
     Properties:
       DefaultRouteSettings:
