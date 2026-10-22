@@ -446,7 +446,7 @@ GitHub Actions, num workflow só (`.github/workflows/ci.yml`):
 O GitHub entra na AWS por OIDC, sem chave guardada. `infra/github-deploy.yml` é implantado uma vez à mão (é ele que cria o acesso, então não pode ser implantado pelo próprio CI) e cria:
 
 - o provedor OIDC de `token.actions.githubusercontent.com`;
-- a role `nutrail-api-github-deploy`, que só o repositório assume, e só na `main` ou no environment `production` (PR e fork não conseguem). Ela mexe apenas nas stacks `nutrail-api-*`, no bucket de deploy do Serverless e no parâmetro `/serverless-framework/*`, e repassa a role abaixo;
+- a role `nutrail-api-github-deploy`, que só o repositório assume, e só na `main` ou no environment `production` (PR e fork não conseguem). O GitHub escreve no `sub` do token os IDs imutáveis do dono e do repositório (`repo:pedrohdionisio@67081399/nutrail-api@1386532154:ref:refs/heads/main`), e a condição usa esse formato: um repositório recriado com o mesmo nome não herda o acesso. Ela mexe apenas nas stacks `nutrail-api-*`, no bucket de deploy do Serverless e no parâmetro `/serverless-framework/*`, e repassa a role abaixo;
 - a role `nutrail-api-cloudformation`, com que o CloudFormation cria os recursos (`provider.iam.deploymentRole`): `PowerUserAccess` e IAM só para roles `nutrail-api-*`.
 
 Separar as duas mantém quase nenhuma permissão no GitHub: quem cria os recursos é o CloudFormation. O deploy manual usa a mesma `deploymentRole`, então o que passa na máquina passa no CI. O Serverless v4 exige login também no CI, pelo secret `SERVERLESS_ACCESS_KEY`.

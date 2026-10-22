@@ -4,7 +4,8 @@ Description: Lets GitHub Actions deploy nutrail-api through OIDC, without long-l
 Parameters:
   Repository:
     Type: String
-    Default: pedrohdionisio/nutrail-api
+    Description: The repository as GitHub writes it in the OIDC subject, owner@ownerId/repo@repoId.
+    Default: pedrohdionisio@67081399/nutrail-api@1386532154
 
 Resources:
   GitHubOidcProvider:
