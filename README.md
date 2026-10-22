@@ -140,7 +140,27 @@ replaced by in-memory fakes.
 
 ## Deploying
 
-The API runs on real AWS resources provisioned by the Serverless Framework.
+The API runs on real AWS resources provisioned by the Serverless Framework. GitHub Actions deploys
+it (`.github/workflows/ci.yml`):
+
+| Event | What runs |
+|---|---|
+| Pull request | Lint, typecheck and tests |
+| Push to `main` | Checks, then deploy to `dev` |
+| Tag `v*` | Checks, then deploy to `prod` after approval in the `production` environment |
+
+GitHub signs in to AWS through OIDC, with no AWS keys stored in the repository. The role it assumes
+(`nutrail-api-github-deploy`) can only touch the `nutrail-api-*` stacks and hand them to the role
+CloudFormation deploys with (`nutrail-api-cloudformation`, `provider.iam.deploymentRole`); both come
+from `infra/github-deploy.yml`, deployed once by hand:
+
+```bash
+aws cloudformation deploy --region us-east-1 --stack-name nutrail-github-deploy \
+  --template-file infra/github-deploy.yml --capabilities CAPABILITY_NAMED_IAM
+```
+
+The repository needs the secret `SERVERLESS_ACCESS_KEY` and the variables `ALERT_EMAIL` and
+`AWS_DEPLOY_ROLE_ARN` (the `GitHubDeployRoleArn` output). Deploying by hand still works:
 
 ```bash
 pnpm install

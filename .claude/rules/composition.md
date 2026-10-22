@@ -67,6 +67,10 @@ paths:
 - Monitoramento cabe no free tier do CloudWatch: 5 alarmes por stage (5xx do HTTP API, erros de
   `mealUploaded`, `processMeal` e `customMessage`, mensagem na DLQ), todos notificando o SNS
   `alerts`. Função assíncrona nova ganha alarme de erro; rota HTTP já é coberta pelo 5xx.
+- Todo deploy passa pela role `nutrail-api-cloudformation` (`provider.iam.deploymentRole`), criada
+  por `infra/github-deploy.yml`. Recurso de um serviço novo fora do `PowerUserAccess` (IAM que não
+  seja role `nutrail-api-*`) exige mudar esse template antes. O CI (`.github/workflows/ci.yml`)
+  faz o deploy do `dev` na `main` e do `prod` em tag `v*`.
 - Deploy só com pedido explícito: `pnpm run deploy` (ou `pnpm run deploy --stage prod`), com
   `ALERT_EMAIL` no ambiente e o parâmetro `/nutrail-api/<stage>/openai-api-key` já criado. Sem o
   `run`, `pnpm deploy` é outro comando do pnpm.

@@ -30,6 +30,7 @@ provider:
         audience:
           - !Ref UserPoolClient
   iam:
+    deploymentRole: arn:aws:iam::${aws:accountId}:role/nutrail-api-cloudformation
     role:
       statements:
         - Effect: Allow

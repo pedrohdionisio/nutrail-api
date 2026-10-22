@@ -435,6 +435,22 @@ O domínio é `nutrail.app` (`custom.domain` no `serverless.yml`), com o DNS na 
 - **Sandbox:** a conta começa no sandbox do SES (só envia para endereços verificados, 200 por dia). A saída é pedida uma vez no console, depois da identity verificada.
 - **Remetente:** os e-mails da API (`EMAIL_FROM`) saem como `Nutrail <no-reply@nutrail.app>` nos dois stages, porque a identity é da conta. O e-mail de recuperação de senha continua saindo pelo remetente padrão do Cognito (`no-reply@verificationemail.com`, até 50 por dia), com o conteúdo do trigger `customMessage`. Ele só passa para o SES depois da saída do sandbox: no sandbox, o SES só entrega para endereços verificados, e quem não estivesse verificado ficaria sem conseguir recuperar a senha.
 
+### 5.10 Deploy contínuo
+
+GitHub Actions, num workflow só (`.github/workflows/ci.yml`):
+
+- **Pull request:** lint, typecheck e testes. Não fala com a AWS.
+- **Push na `main`:** os mesmos checks e, se passarem, deploy do `dev`.
+- **Tag `v*`:** os checks e o deploy do `prod`, no environment `production` do GitHub, que exige aprovação manual e só aceita tags `v*`.
+
+O GitHub entra na AWS por OIDC, sem chave guardada. `infra/github-deploy.yml` é implantado uma vez à mão (é ele que cria o acesso, então não pode ser implantado pelo próprio CI) e cria:
+
+- o provedor OIDC de `token.actions.githubusercontent.com`;
+- a role `nutrail-api-github-deploy`, que só o repositório assume, e só na `main` ou no environment `production` (PR e fork não conseguem). Ela mexe apenas nas stacks `nutrail-api-*`, no bucket de deploy do Serverless e no parâmetro `/serverless-framework/*`, e repassa a role abaixo;
+- a role `nutrail-api-cloudformation`, com que o CloudFormation cria os recursos (`provider.iam.deploymentRole`): `PowerUserAccess` e IAM só para roles `nutrail-api-*`.
+
+Separar as duas mantém quase nenhuma permissão no GitHub: quem cria os recursos é o CloudFormation. O deploy manual usa a mesma `deploymentRole`, então o que passa na máquina passa no CI. O Serverless v4 exige login também no CI, pelo secret `SERVERLESS_ACCESS_KEY`.
+
 ---
 
 ## 6. Armazenamento de arquivos (S3)

@@ -70,6 +70,8 @@ src/
   main/           container (composition root), adapters das Lambdas e functions (uma linha)
   kernel/         Container, @Injectable e @Schema
   shared/config/  AppConfig
+infra/            github-deploy.yml: OIDC do GitHub e as roles de deploy, implantado uma vez à mão
+.github/          CI (checks no PR, deploy do dev na main e do prod em tag v*) e Dependabot
 sls/
   functions/      uma função por arquivo
   resources/      DynamoDB, S3, SQS, Cognito, monitoramento e stage do HTTP API
