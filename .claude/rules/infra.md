@@ -18,9 +18,8 @@ tabela, bucket e fila vêm do `AppConfig`.
 
 - Single-table. Chaves e access patterns são os da seção 3 de `docs/ARCHITECTURE.md`; entidade ou
   leitura nova entra primeiro lá. GSI2 e GSI3 estão livres.
-- Toda chave começa pelo usuário: `PK = USER#{userId}`. Nunca `Scan`. A única exceção é o convite,
-  `INVITE#{code}` / `INVITE`, lido só pela chave.
-- Contador com limite (`DynamoUsageCounter`, `DynamoInviteCodes`) é um `UpdateItem` com `ADD` e o
+- Toda chave começa pelo usuário: `PK = USER#{userId}`. Nunca `Scan`.
+- Contador com limite (`DynamoUsageCounter`) é um `UpdateItem` com `ADD` e o
   limite na `ConditionExpression`, nunca ler e depois gravar. `ConditionalCheckFailedException` vira
   `false`; qualquer outro erro sobe.
 - `create` grava com `attribute_not_exists(PK)` e `update` com `attribute_exists(PK)`: um update

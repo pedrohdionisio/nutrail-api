@@ -7,7 +7,6 @@ import { FakeRecipeGenerator } from './FakeRecipeGenerator';
 import { FakeTranscriber } from './FakeTranscriber';
 import { FixedClock } from './FixedClock';
 import { InMemoryDatabase } from './InMemoryDatabase';
-import { InMemoryInviteCodes } from './InMemoryInviteCodes';
 import { InMemoryMealRepository } from './InMemoryMealRepository';
 import {
   InMemoryGetMealQuery,
@@ -41,7 +40,6 @@ export function createFakes() {
     listSavedMeals: new InMemoryListSavedMealsQuery(db),
     userIdResolver: new InMemoryUserIdResolver(db),
     usage: new InMemoryUsageCounter(db),
-    invites: new InMemoryInviteCodes(db),
     auth: new FakeAuthProvider(),
     storage: new FakeFileStorage(),
     analyzer: new FakeMealAnalyzer(),

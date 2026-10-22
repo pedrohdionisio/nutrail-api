@@ -182,9 +182,6 @@ pnpm run deploy         # stage dev; pnpm run deploy --stage prod for production
 - The sender in `EMAIL_FROM` (`serverless.yml`, `no-reply@nutrail.app`) must be a verified SES
   identity, or the welcome e-mail is not sent. Sign-up does not fail because of it.
 - AWS sends a confirmation link to `ALERT_EMAIL`; the alarms only reach you after it is confirmed.
-- Sign-up is invite-only. `pnpm invite` creates a single-use code on `dev` and copies it to the
-  clipboard; `pnpm invite:prod` does the same on `prod`. Add `--uses 5` for a shared code or
-  `--code NUTRAIL-BETA` to pick it.
 - `pnpm upload:meal [file]` signs in with `TEST_USER_EMAIL` and `TEST_USER_PASSWORD` against
   `BASE_URL`, uploads a picture or a voice note and polls until the meal is analyzed — a smoke test
   of the whole pipeline on a deployed stage.
@@ -193,7 +190,6 @@ pnpm run deploy         # stage dev; pnpm run deploy --stage prod for production
 |---|---|
 | `pnpm run deploy` | Deploy the stack (`pnpm deploy`, without `run`, is a different pnpm command) |
 | `pnpm upload:meal` | Smoke test the meal pipeline on a deployed stage |
-| `pnpm invite` · `invite:prod` | Create an invite code on `dev` or `prod` and copy it to the clipboard (`--uses`, `--code`) |
 | `pnpm dev:email` | Preview the e-mail templates |
 | `pnpm lint` · `pnpm lint:fix` | Biome |
 | `pnpm typecheck` | `tsc` |
