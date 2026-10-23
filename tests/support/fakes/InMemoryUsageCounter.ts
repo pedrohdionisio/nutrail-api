@@ -37,5 +37,5 @@ export function exhaustDailyLimit(
   userId: string,
   kind: UsageKind,
 ): void {
-  db.usage.set(usageKey(userId, '2026-09-26', kind), DAILY_LIMITS[kind]);
+  db.usage.set(usageKey(userId, '2026-09-26', kind), DAILY_LIMITS.FREE[kind]);
 }

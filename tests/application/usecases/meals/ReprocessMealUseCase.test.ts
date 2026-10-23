@@ -17,7 +17,7 @@ describe('ReprocessMealUseCase', () => {
     reprocessMeal = new ReprocessMealUseCase(
       f.meals,
       f.queue,
-      new DailyQuota(f.usage, f.clock),
+      new DailyQuota(f.usage, f.subscriptions, f.clock),
     );
   });
 

@@ -15,7 +15,7 @@ describe('AnalyzeMealItemsUseCase', () => {
     f = createFakes();
     analyzeMealItems = new AnalyzeMealItemsUseCase(
       f.analyzer,
-      new DailyQuota(f.usage, f.clock),
+      new DailyQuota(f.usage, f.subscriptions, f.clock),
     );
   });
 

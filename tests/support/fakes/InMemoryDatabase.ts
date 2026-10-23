@@ -1,6 +1,7 @@
 import { Meal } from '@/domain/entities/Meal';
 import { Recipe } from '@/domain/entities/Recipe';
 import { SavedMeal } from '@/domain/entities/SavedMeal';
+import { Subscription } from '@/domain/entities/Subscription';
 import { User } from '@/domain/entities/User';
 
 export class InMemoryDatabase {
@@ -9,6 +10,7 @@ export class InMemoryDatabase {
   readonly recipes = new Map<string, Recipe>();
   readonly savedMeals = new Map<string, SavedMeal>();
   readonly usage = new Map<string, number>();
+  readonly subscriptions = new Map<string, Subscription>();
 
   putUser(user: User): void {
     this.users.set(user.id, copyUser(user));
@@ -24,6 +26,10 @@ export class InMemoryDatabase {
 
   putSavedMeal(savedMeal: SavedMeal): void {
     this.savedMeals.set(savedMeal.id, copySavedMeal(savedMeal));
+  }
+
+  putSubscription(subscription: Subscription): void {
+    this.subscriptions.set(subscription.userId, new Subscription(subscription));
   }
 }
 

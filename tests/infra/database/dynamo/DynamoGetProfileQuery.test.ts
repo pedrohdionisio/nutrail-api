@@ -16,6 +16,8 @@ describe('DynamoGetProfileQuery', () => {
   it('should split the profile item into profile and goals', async () => {
     const { mock, query } = setup();
     mock
+      .on(GetCommand)
+      .resolves({})
       .on(GetCommand, { Key: { PK: 'USER#user-1', SK: 'PROFILE' } })
       .resolves({
         Item: {
@@ -46,6 +48,23 @@ describe('DynamoGetProfileQuery', () => {
         activityLevel: 'MODERATE',
       },
       goals: { calories: 1800, protein: 120, carbohydrate: 204, fat: 54 },
+      subscription: null,
+    });
+  });
+
+  it('should add the status of the subscription when the user has one', async () => {
+    const { mock, query } = setup();
+    mock
+      .on(GetCommand, { Key: { PK: 'USER#user-1', SK: 'PROFILE' } })
+      .resolves({ Item: { name: 'Ana Souza', calories: 1800 } })
+      .on(GetCommand, { Key: { PK: 'USER#user-1', SK: 'SUBSCRIPTION' } })
+      .resolves({
+        Item: { status: 'ACTIVE', cancelAt: '2026-10-26T15:00:00.000Z' },
+      });
+
+    expect((await query.execute('user-1'))?.subscription).toEqual({
+      status: 'ACTIVE',
+      cancelAt: '2026-10-26T15:00:00.000Z',
     });
   });
 

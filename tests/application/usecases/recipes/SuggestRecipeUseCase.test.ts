@@ -24,7 +24,7 @@ describe('SuggestRecipeUseCase', () => {
       f.getProfile,
       f.listMealsByDay,
       f.recipeGenerator,
-      new DailyQuota(f.usage, f.clock),
+      new DailyQuota(f.usage, f.subscriptions, f.clock),
     );
     f.db.putUser(
       buildUser({

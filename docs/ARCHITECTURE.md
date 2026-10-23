@@ -45,6 +45,7 @@ App de controle de calorias e macros (calorias, proteínas, carboidratos e gordu
 | Recipe | `USER#{id}` | `RECIPE#{id}` | – | – |
 | SavedMeal | `USER#{id}` | `SAVED_MEAL#{id}` | – | – |
 | Usage (cota do dia) | `USER#{id}` | `USAGE#{YYYY-MM-DD}` | – | – |
+| Subscription (plano Premium) | `USER#{id}` | `SUBSCRIPTION` | – | – |
 
 GSI2 e GSI3 estão livres para necessidades futuras.
 
@@ -60,6 +61,7 @@ GSI2 e GSI3 estão livres para necessidades futuras.
 | Buscar refeição salva por id | Main table | `GetItem` PK=`USER#{id}`, SK=`SAVED_MEAL#{savedMealId}` |
 | Listar refeições salvas do usuário | Main table | `Query` PK=`USER#{id}`, `begins_with(SK, 'SAVED_MEAL#')` |
 | Contar um uso da IA no dia, se ainda couber | Main table | `UpdateItem` PK=`USER#{id}`, SK=`USAGE#{day}`, `ADD` com condição |
+| Buscar a assinatura do usuário | Main table | `GetItem` PK=`USER#{id}`, SK=`SUBSCRIPTION` |
 
 ### 3.3 Atributos
 
@@ -124,6 +126,17 @@ As metas ficam embutidas no item do usuário porque a home sempre precisa das du
 | `items` | `Item[]` | Copiados da refeição de origem |
 | `calories`, `protein`, `carbohydrate`, `fat` | number | Totais, derivados dos itens |
 | `createdAt` | string | ISO 8601 |
+
+**Subscription**
+
+| Atributo | Tipo | Observação |
+|---|---|---|
+| `customerId` | string | Id do cliente no provedor de pagamento |
+| `subscriptionId` | string | Id da assinatura no provedor de pagamento |
+| `status` | enum | `INCOMPLETE` \| `INCOMPLETE_EXPIRED` \| `TRIALING` \| `ACTIVE` \| `PAST_DUE` \| `CANCELED` \| `UNPAID` \| `PAUSED` |
+| `cancelAt` | string \| null | ISO 8601; quando a assinatura cancelada deixa de valer |
+
+A assinatura fica num item próprio, e não no PROFILE, porque o `UserRepository.update` regrava o PROFILE inteiro (`PutItem`): um `PUT /profile` apagaria o estado gravado pelo webhook. Sem item, o usuário é `FREE`. `TRIALING`, `ACTIVE` e `PAST_DUE` (carência enquanto o provedor tenta cobrar de novo) valem `PREMIUM`; os demais, `FREE`. A regra mora em `planOf`, na entidade `Subscription`.
 
 **Usage**
 
@@ -380,6 +393,7 @@ container.bind(CreateMealUseCase, CreateMealUseCase, { scope: 'transient' });
   - Taxa metabólica basal pela **Mifflin-St Jeor**, a equação mais validada para a população geral entre as que não exigem composição corporal. Idade exata, considerando mês e dia.
   - Gasto total = TMB × fator de atividade (1,2 a 1,9), mais ou menos 500 kcal conforme o objetivo.
   - Proteína de 2 g/kg e gordura de 0,9 g/kg; o carboidrato completa as calorias.
+- **`GET /me`:** devolve `{ profile, goals, subscription: { plan, cancelAt }, dailyLimits: { mealAnalyses, recipes } }`, lidos do PROFILE e do SUBSCRIPTION com dois `GetItem` em paralelo. `dailyLimits` são os limites do plano atual, para o app mostrar a cota sem conhecer as regras.
 - **Metas e perfil:** `PUT /profile` recalcula as metas e sobrescreve qualquer ajuste manual. `PUT /goals` edita as metas sem mexer no perfil e mantém calorias e macros coerentes (4 kcal/g de proteína e carboidrato, 9 kcal/g de gordura). O body é `{ calories }` ou `{ protein, carbohydrate, fat }`: com calorias, proteína e gordura ficam e o carboidrato completa (erro 422 se não couber); com macros, as calorias são a soma. Devolve `{ goals }`.
 
 ### 5.7 Observabilidade
@@ -398,7 +412,8 @@ A IA é o único custo que cresce com o uso, então o acesso a ela tem limite.
 
 - **Throttling do HTTP API** (`sls/resources/httpApi.yml`): 10 requisições por segundo, com burst de 20, somadas para todas as rotas do stage. É uma proteção contra rajada e loop de cliente, não contra um usuário específico. Acima disso o próprio API Gateway responde `429` sem chamar a Lambda, com o corpo `{"message":"Too Many Requests"}`, sem `code`, e o app mostra o erro genérico.
 - **Orçamento da conta** (`sls/resources/budget.yml`, só no `prod`, porque vale para a conta inteira): AWS Budgets de US$ 15 por mês, com e-mail para o `ALERT_EMAIL` quando o gasto real passa de US$ 5 e de US$ 15 e quando a previsão do mês passa de US$ 15. É aviso, não trava: quem limita o gasto da OpenAI é o limite mensal configurado no painel dela, com uma chave por stage.
-- **Cota diária por usuário** (`DailyQuota`, `application/services/`): 20 análises de refeição e 5 sugestões de receita por dia UTC. O limite é do usuário, não do cliente, então vale mesmo com o app adulterado.
+- **Cota diária por usuário** (`DailyQuota`, `application/services/`): no plano `FREE`, 20 análises de refeição e 5 sugestões de receita por dia UTC; no `PREMIUM`, 100 e 30. O Premium também tem teto, porque cada chamada custa na OpenAI. O limite é do usuário, não do cliente, então vale mesmo com o app adulterado.
+  - O `DailyQuota` lê o plano pelo `SubscriptionRepository` antes de incrementar (um `GetItem` a mais por chamada à IA).
   - Conta como análise: `POST /meals/manual`, `POST /meals` (foto ou áudio), `POST /meals/{mealId}/reprocess` e `POST /meals/items/analysis`. Conta como receita: `POST /recipes/suggestions`. As tentativas automáticas da fila não contam, porque já foram pagas na criação.
   - O use case consome a cota **antes** de chamar a IA e depois das validações baratas (meal inexistente ou que não pode ser reprocessada não gasta cota). Uma análise que falha continua contada: a chamada à OpenAI já custou.
   - O port `UsageCounter` incrementa o item `USAGE#{day}` com `ADD` e a condição `attribute_not_exists(#count) OR #count < :limit`, atômico mesmo com requisições simultâneas. A condição falhando, o `DailyQuota` lança 429 `DAILY_LIMIT_REACHED`.

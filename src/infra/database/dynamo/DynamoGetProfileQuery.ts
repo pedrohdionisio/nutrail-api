@@ -1,4 +1,8 @@
-import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
+import {
+  DynamoDBDocumentClient,
+  GetCommand,
+  type GetCommandOutput,
+} from '@aws-sdk/lib-dynamodb';
 import type {
   GetProfileQuery,
   ProfileWithGoals,
@@ -6,7 +10,7 @@ import type {
 import { Injectable } from '@/kernel/decorators/Injectable';
 import { AppConfig } from '@/shared/config/AppConfig';
 
-const ATTRIBUTES = [
+const PROFILE_ATTRIBUTES = [
   'name',
   'email',
   'gender',
@@ -21,6 +25,8 @@ const ATTRIBUTES = [
   'fat',
 ];
 
+const SUBSCRIPTION_ATTRIBUTES = ['status', 'cancelAt'];
+
 @Injectable()
 export class DynamoGetProfileQuery implements GetProfileQuery {
   constructor(
@@ -29,36 +35,55 @@ export class DynamoGetProfileQuery implements GetProfileQuery {
   ) {}
 
   async execute(userId: string): Promise<ProfileWithGoals | null> {
+    const [profile, subscription] = await Promise.all([
+      this.get(userId, 'PROFILE', PROFILE_ATTRIBUTES),
+      this.get(userId, 'SUBSCRIPTION', SUBSCRIPTION_ATTRIBUTES),
+    ]);
+
+    if (!profile) return null;
+
+    return {
+      profile: {
+        name: profile.name,
+        email: profile.email,
+        gender: profile.gender,
+        birthDate: profile.birthDate,
+        height: profile.height,
+        weight: profile.weight,
+        goal: profile.goal,
+        activityLevel: profile.activityLevel,
+      },
+      goals: {
+        calories: profile.calories,
+        protein: profile.protein,
+        carbohydrate: profile.carbohydrate,
+        fat: profile.fat,
+      },
+      subscription: subscription
+        ? {
+            status: subscription.status,
+            cancelAt: subscription.cancelAt ?? null,
+          }
+        : null,
+    };
+  }
+
+  private async get(
+    userId: string,
+    sk: string,
+    attributes: string[],
+  ): Promise<GetCommandOutput['Item']> {
     const { Item } = await this.client.send(
       new GetCommand({
         TableName: this.config.tableName,
-        Key: { PK: `USER#${userId}`, SK: 'PROFILE' },
-        ProjectionExpression: ATTRIBUTES.map((name) => `#${name}`).join(', '),
+        Key: { PK: `USER#${userId}`, SK: sk },
+        ProjectionExpression: attributes.map((name) => `#${name}`).join(', '),
         ExpressionAttributeNames: Object.fromEntries(
-          ATTRIBUTES.map((name) => [`#${name}`, name]),
+          attributes.map((name) => [`#${name}`, name]),
         ),
       }),
     );
 
-    if (!Item) return null;
-
-    return {
-      profile: {
-        name: Item.name,
-        email: Item.email,
-        gender: Item.gender,
-        birthDate: Item.birthDate,
-        height: Item.height,
-        weight: Item.weight,
-        goal: Item.goal,
-        activityLevel: Item.activityLevel,
-      },
-      goals: {
-        calories: Item.calories,
-        protein: Item.protein,
-        carbohydrate: Item.carbohydrate,
-        fat: Item.fat,
-      },
-    };
+    return Item;
   }
 }

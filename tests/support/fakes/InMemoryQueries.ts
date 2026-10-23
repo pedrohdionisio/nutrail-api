@@ -37,6 +37,8 @@ export class InMemoryGetProfileQuery implements GetProfileQuery {
 
     if (!user) return null;
 
+    const subscription = this.db.subscriptions.get(userId);
+
     return {
       profile: {
         name: user.name,
@@ -49,6 +51,9 @@ export class InMemoryGetProfileQuery implements GetProfileQuery {
         activityLevel: user.activityLevel,
       },
       goals: { ...user.goals },
+      subscription: subscription
+        ? { status: subscription.status, cancelAt: subscription.cancelAt }
+        : null,
     };
   }
 }

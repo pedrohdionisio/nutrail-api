@@ -17,7 +17,7 @@ describe('CreateMealUseCase', () => {
       f.storage,
       f.ids,
       f.clock,
-      new DailyQuota(f.usage, f.clock),
+      new DailyQuota(f.usage, f.subscriptions, f.clock),
     );
   });
 

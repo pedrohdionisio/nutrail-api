@@ -29,6 +29,7 @@ export class InMemoryUserRepository implements UserRepository {
 
   async deleteWithAllData(id: string): Promise<void> {
     this.db.users.delete(id);
+    this.db.subscriptions.delete(id);
 
     for (const table of [this.db.meals, this.db.recipes, this.db.savedMeals]) {
       for (const [key, item] of table) {

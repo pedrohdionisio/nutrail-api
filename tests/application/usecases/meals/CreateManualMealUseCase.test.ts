@@ -27,7 +27,7 @@ describe('CreateManualMealUseCase', () => {
       f.analyzer,
       f.ids,
       f.clock,
-      new DailyQuota(f.usage, f.clock),
+      new DailyQuota(f.usage, f.subscriptions, f.clock),
     );
   });
 
