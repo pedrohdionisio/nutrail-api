@@ -7,12 +7,13 @@
 Backend of **Nutrail**, an AI-first food diary: the user logs a meal by taking a picture, recording a
 voice note or typing what they ate, and gets back the foods with calories, protein, carbohydrate and
 fat, measured against daily goals calculated from their profile. It also suggests a recipe from
-what is left in the fridge.
+what is left in the fridge. See it in use at **[nutrail.app](https://nutrail.app)**.
 
 | Repository | What it is |
 |---|---|
 | **nutrail-api** (this one) | Serverless REST API, meal processing pipeline and AI integration on AWS |
 | [nutrail-app](https://github.com/pedrohdionisio/nutrail-app) | React Native (Expo) app |
+| [nutrail-web](https://github.com/pedrohdionisio/nutrail-web) | The website at [nutrail.app](https://nutrail.app), in Next.js |
 | [nutrail](https://github.com/pedrohdionisio/nutrail) | The product overview |
 
 ## Contents
